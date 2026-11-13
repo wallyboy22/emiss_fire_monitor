@@ -1,6 +1,6 @@
 # Monitor de emissões por fogo — Bioma × UF
 
-Repositório principal do projeto. O clone GEE `users/workspaceipam/SEEG` permanece como repositório auxiliar para scripts usados no Earth Engine Code Editor.
+Este é o repositório principal do monitor de emissões. Os scripts usados no Earth Engine Code Editor também ficam no repositório auxiliar `users/workspaceipam/SEEG`.
 
 ## Artefatos
 
@@ -28,7 +28,7 @@ O builder usa o CSV consolidado versionado. Se CSVs mensais forem colocados em `
 
 ## GitHub Pages
 
-O workflow em `.github/workflows/pages.yml` publica `index.html` a partir da branch `main`. URL esperada: <https://wallyboy22.github.io/emiss_fire_monitor/>.
+O workflow em `.github/workflows/pages.yml` publica o dashboard a cada atualização da branch `main`. A página fica em <https://wallyboy22.github.io/emiss_fire_monitor/>.
 
 ## Nota de validação
 
