@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+data/monthly/*.csv
+venv/
+.venv/
