@@ -21,12 +21,22 @@ class FirstEssayContractTest(unittest.TestCase):
         self.assertIn("Export.image.toAsset({", script)
         self.assertIn("image:img,", script)
 
-    def test_script_does_not_serialize_or_stack_all_months_for_debugging(self):
+    def test_preview_stacks_outputs_and_burned_area_without_printing_client_array(self):
         script = CURRENT.read_text(encoding="utf-8")
 
         self.assertNotIn("print('monthly_list_collection'", script)
-        self.assertNotIn("monthly_list_collection.toBands()", script)
-        self.assertNotIn("ImageCollection(monthly_list_collection)", script)
+        self.assertIn("ee.ImageCollection.fromImages(monthly_preview_images)", script)
+        self.assertIn("monthly_preview.select('emiss_CO2').toBands()", script)
+        self.assertIn("monthly_preview.select('emiss_CO2e_CH4').toBands()", script)
+        self.assertIn("monthly_preview.select('emiss_CO2e_N2O').toBands()", script)
+        self.assertIn("monthly_burned.sort('system:time_start').toBands()", script)
+
+    def test_exports_are_disabled_while_preview_is_inspected(self):
+        script = CURRENT.read_text(encoding="utf-8")
+
+        self.assertIn("var EXPORT_IMAGES = false;", script)
+        self.assertIn("var MONTHS_TO_PROCESS = null;", script)
+        self.assertIn("if (EXPORT_IMAGES)", script)
 
     def test_single_band_version_is_preserved_as_reference(self):
         script = REFERENCE.read_text(encoding="utf-8")

@@ -109,18 +109,27 @@ var classes_list = {
 
 var antropic_list = ["Pastagem","Agricultura"];
 
+// Execute primeiro com false para inspecionar os pixels. Ative somente depois
+// de validar a prévia e confirmar o destino das imagens de saída.
+var EXPORT_IMAGES = false;
+// null processa todos os meses; para um teste menor, use nomes como
+// ['brazil-2024-9']. O filtro vale tanto para a prévia quanto para os exports.
+var MONTHS_TO_PROCESS = null;
+
 Map.addLayer(coverage,{},'coverage',false);
 Map.addLayer(biomas,{},'biomas',false);
 Map.addLayer(historical_carbon,{},'historical_carbon',false);
 // Map.addLayer(monthly_burned,{},'monthly_burned');
-Map.addLayer(monthly_burned.toBands(),{},'monthly_burned 2 ');
+Map.addLayer(monthly_burned.sort('system:time_start').toBands(),{},'Burned area — all months');
 
 var biomas_list = Object.keys(fatoresEmissaoPorBioma);
 var coverage_list = Object.keys(fatoresEmissaoPorBioma['Amazônia']);
 
 monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
+  var monthly_preview_images = [];
 
   monthly_list.forEach(function(year_month){
+    if (MONTHS_TO_PROCESS && MONTHS_TO_PROCESS.indexOf(year_month) === -1) return;
 
     var burned = monthly_burned.filter(ee.Filter.eq('name',year_month)).first();
 
@@ -245,24 +254,44 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
       });
 
 
-    Export.image.toAsset({
-      image:img,
-      description:'WS_IPAM_SEEG-'+description,
-      assetId:assetId,
-      pyramidingPolicy:'median',
-      // dimensions:,
-      region:biomas_bounds,
-      scale:30,
-      // crs:,
-      // crsTransform:,
-      maxPixels:1e13,
-      // shardSize:,
-      // priority:,
-      // overwrite:true
-    })
+    monthly_preview_images.push(img);
+
+    if (EXPORT_IMAGES) {
+      Export.image.toAsset({
+        image:img,
+        description:'WS_IPAM_SEEG-'+description,
+        assetId:assetId,
+        pyramidingPolicy:'median',
+        region:biomas_bounds,
+        scale:30,
+        maxPixels:1e13
+      });
+    }
 
 
   });
 
-  print('Monthly three-band export tasks created:', monthly_list.length);
+  var monthly_preview = ee.ImageCollection.fromImages(monthly_preview_images)
+    .sort('system:time_start');
+
+  print('Monthly images in preview:', monthly_preview.size());
+  Map.addLayer(
+    monthly_preview.select('emiss_CO2').toBands(),
+    {},
+    'emiss_CO2 — all months'
+  );
+  Map.addLayer(
+    monthly_preview.select('emiss_CO2e_CH4').toBands(),
+    {},
+    'emiss_CO2e_CH4 — all months'
+  );
+  Map.addLayer(
+    monthly_preview.select('emiss_CO2e_N2O').toBands(),
+    {},
+    'emiss_CO2e_N2O — all months'
+  );
+
+  if (EXPORT_IMAGES) {
+    print('Export tasks created for months:', monthly_list.length);
+  }
 });

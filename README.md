@@ -24,6 +24,8 @@ O builder usa o CSV consolidado versionado. Se CSVs mensais forem colocados em `
 
 `src/stats_do_primeiro_ensaio.py` exporta tabelas mensais por Bioma × UF × classe. Requer Earth Engine autenticado localmente. A opção `--submit` inicia tarefas remotas; sem ela, o script apenas lista as tarefas. As exportações são destinadas à pasta Drive `monitoramento-sentinel`.
 
+`gee/primeiro_ensaio.js` começa em modo de prévia, sem criar exports. A prévia empilha as três bandas calculadas por mês e a área queimada para inspeção no mapa/Inspector. Use `MONTHS_TO_PROCESS` para limitar o teste; depois de validar os pixels e o destino, altere `EXPORT_IMAGES` para `true`.
+
 `gee/investigando_primeiro_ensaio.js` compara a emissão mensal existente com recálculos usando o QCN original e `c_rect_col11_2019`. Edite `YEAR_MONTHS`; para análise nacional exata, use exportação em batch, pois reduções síncronas a 30 m podem exceder o timeout.
 
 ## GitHub Pages
