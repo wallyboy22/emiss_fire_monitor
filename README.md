@@ -7,7 +7,7 @@ Este é o repositório principal do monitor de emissões. Os scripts usados no E
 - [`index.html`](index.html): dashboard autocontido, com dados e Chart.js embutidos; funciona localmente e no GitHub Pages.
 - [`data/consolidado_monitor_emissoes_bioma_uf.csv`](data/consolidado_monitor_emissoes_bioma_uf.csv): tabela mensal para Looker Studio e para reconstruir o dashboard.
 - [`src/`](src/): builder Python e pipeline de estatísticas/exportação.
-- [`gee/`](gee/): script original do primeiro ensaio e script de investigação dos mapas de carbono. O último também é mantido no repo GEE auxiliar em `SEEG14/RETIFICACAO/`.
+- [`gee/`](gee/): script atual do primeiro ensaio (saída mensal com três bandas), referência da versão anterior de uma banda e script de investigação dos mapas de carbono. Os scripts do Code Editor também são mantidos no repositório GEE auxiliar.
 
 O consolidado contém 32.351 linhas, 93 meses (2019-01 a 2026-09) e 27 UFs. Cada linha representa a agregação mensal por bioma, UF e classe. No Looker Studio, conecte o CSV acima e use `Ano`, `mes`, `Bioma`, `SIGLA_UF` e as classes como dimensões; `Área km²` e `Emissão CO2` são métricas somáveis.
 
