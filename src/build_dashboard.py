@@ -176,6 +176,319 @@ def build_payload(df, territory):
             "method": method_payload()}
 
 
+# ---------------- diagramas da página de método (SVG inline) ----------------
+def _fmt(v, d=0):
+    return f"{v:,.{d}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _tx(x, y, text, cls="s-t", anchor="middle"):
+    return f'<text x="{x:g}" y="{y:g}" class="{cls}" text-anchor="{anchor}">{text}</text>'
+
+
+def _marker(mid, cls="s-arw"):
+    return (f'<defs><marker id="{mid}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+            f'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="{cls}"/></marker></defs>')
+
+
+def _svg(w, h, label, body, wide=True, caption=""):
+    cls = "dg wide" if wide else "dg"
+    return (f'<figure class="{cls}"><div class="sc"><svg viewBox="0 0 {w} {h}" role="img" aria-label="{label}">'
+            f'{body}</svg></div><figcaption>{caption}</figcaption></figure>')
+
+
+def _cover_color(name):
+    return dict(COVER).get(name, COVER_OTHER[1])
+
+
+def svg_overview():
+    m = "ar-ov"
+    b = [_marker(m)]
+    x0, w, gap, y, h = 196, 132, 22, 112, 84
+    cy = y + h / 2
+    inputs = [("Fogo do mês", "onde e quando queimou", 74), ("Cobertura do ano", "o que queimou", 130),
+              ("Biomas e estados", "parâmetros e recortes", 186)]
+    for t, sub, iy in inputs:
+        b.append(f'<rect x="8" y="{iy}" width="150" height="48" rx="9" class="s-in"/>')
+        b.append(_tx(83, iy + 21, t)); b.append(_tx(83, iy + 38, sub, "s-tm"))
+        my = iy + 24
+        b.append(f'<path d="M158,{my} C178,{my} 176,{cy} {x0 - 2},{cy}" class="s-ln" marker-end="url(#{m})"/>')
+    steps = [("Pixel queimado", "fogo + cobertura", "classe e bioma", "6 categorias de vegetação"),
+             ("Carbono queimado", "estoque × combustão", "t C/ha", "fator por bioma e classe"),
+             ("Biomassa queimada", "÷ 0,47", "t matéria seca/ha", "47% da matéria seca é carbono"),
+             ("Gases emitidos", "× fator de emissão", "CO₂ · CH₄ · N₂O", "g por kg de matéria seca"),
+             ("CO₂ equivalente", "× GWP (IPCC AR5)", "t CO₂e/ha", "CH₄ 28 · N₂O 265"),
+             ("Toneladas", "× área do pixel, Σ", "bioma × UF × classe", "≈ 0,09 ha por pixel")]
+    for i, (t, op, unit, tag) in enumerate(steps):
+        x = x0 + i * (w + gap)
+        last = i == len(steps) - 1
+        b.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="10" class="{"s-out" if last else "s-box"}"/>')
+        b.append(_tx(x + w / 2, y + 26, t, "s-t s-on" if last else "s-t"))
+        b.append(_tx(x + w / 2, y + 48, op, "s-op s-on" if last else "s-op"))
+        b.append(_tx(x + w / 2, y + 68, unit, "s-tm s-on" if last else "s-tm"))
+        b.append(_tx(x + w / 2, y + h + 22, tag, "s-tm"))
+        if not last:
+            b.append(f'<line x1="{x + w}" y1="{cy}" x2="{x + w + gap - 2}" y2="{cy}" class="s-ln" marker-end="url(#{m})"/>')
+    cx = x0 + (w + gap) + w / 2
+    b.append(f'<rect x="{cx - 75}" y="10" width="150" height="48" rx="9" class="s-in"/>')
+    b.append(_tx(cx, 31, "Estoque de carbono")); b.append(_tx(cx, 48, "mapa de 2019 · médias", "s-tm"))
+    b.append(f'<line x1="{cx}" y1="58" x2="{cx}" y2="{y - 2}" class="s-ln" marker-end="url(#{m})"/>')
+    end = x0 + 6 * w + 5 * gap
+    b.append(f'<path d="M{x0},244 v8 H{end} v-8" class="s-lnd"/>')
+    b.append(_tx((x0 + end) / 2, 274, "repetido para cada mês desde janeiro de 2019, em todos os pixels de 30 m do país", "s-t2"))
+    return _svg(1110, 290, "Visão geral: fogo, cobertura e limites identificam o pixel queimado; o carbono queimado é convertido "
+                "em biomassa, gases, CO2 equivalente e somado em toneladas por bioma, UF e classe.", "".join(b),
+                caption="Toda a estimativa em uma linha: cada caixa é uma etapa, e o texto em destaque é a operação aplicada "
+                        "sobre o resultado da etapa anterior.")
+
+
+def svg_layers():
+    m = "ar-ly"
+    b = [_marker(m, "s-arw-a")]
+    F, S, P, C, A = (_cover_color(n) for n in ["Formação Florestal", "Formação Savânica", "Pastagem",
+                                                 "Formação Campestre", "Agricultura"])
+    cover = ["FFFSSP", "FFSSSP", "FSSSCP", "SSSCCA", "SPPCAA", "PPPAAA"]
+    cmap = {"F": F, "S": S, "P": P, "C": C, "A": A}
+    burned = {(1, 1), (2, 1), (2, 2), (3, 2), (3, 3), (2, 3), (4, 3), (4, 4)}
+    hl = (3, 2)
+    cs, sh, sv = 24, 0.85, 0.42
+    tx = 150
+    layers = [("Fogo do mês", "MapBiomas Fogo", 20), ("Cobertura do ano", "MapBiomas", 120), ("Bioma e estado", "IBGE", 220)]
+    for li, (t, sub, ty) in enumerate(layers):
+        b.append(_tx(8, ty + 26, t, "s-t", "start")); b.append(_tx(8, ty + 43, sub, "s-tm", "start"))
+        g = [f'<g transform="translate({tx},{ty}) matrix(1 0 {sh} {sv} 0 0)">']
+        for r in range(6):
+            for c in range(6):
+                if li == 0:
+                    cls = "s-burn" if (c, r) in burned else "s-cell"
+                    g.append(f'<rect x="{c * cs}" y="{r * cs}" width="{cs}" height="{cs}" class="{cls} s-seam"/>')
+                elif li == 1:
+                    g.append(f'<rect x="{c * cs}" y="{r * cs}" width="{cs}" height="{cs}" fill="{cmap[cover[r][c]]}" class="s-seam"/>')
+                else:
+                    cls = "s-bio1" if c < 4 else "s-bio2"
+                    g.append(f'<rect x="{c * cs}" y="{r * cs}" width="{cs}" height="{cs}" class="{cls} s-seam"/>')
+        if li == 2:
+            g.append(f'<line x1="0" y1="{4 * cs}" x2="{4 * cs}" y2="{4 * cs}" class="s-uf"/>')
+            g.append(f'<line x1="{4 * cs}" y1="0" x2="{4 * cs}" y2="{6 * cs}" class="s-bline"/>')
+        g.append(f'<rect x="{hl[0] * cs}" y="{hl[1] * cs}" width="{cs}" height="{cs}" class="s-hl"/>')
+        g.append('</g>')
+        b.append("".join(g))
+    px = tx + (hl[0] + 0.5) * cs + sh * (hl[1] + 0.5) * cs
+    off = sv * (hl[1] + 0.5) * cs
+    b.append(f'<line x1="{px:.1f}" y1="{20 + off:.1f}" x2="{px:.1f}" y2="{220 + off:.1f}" class="s-acc-d"/>')
+    cardx, cardw = 480, 230
+    b.append(f'<rect x="{cardx}" y="14" width="{cardw}" height="262" rx="12" class="s-box"/>')
+    rows = [("fogo do mês", "queimou em agosto", 20), ("cobertura do ano", "Formação Savânica", 120),
+            ("bioma e estado", "Cerrado · Goiás", 220)]
+    for k, v, ty in rows:
+        yy = ty + off
+        b.append(f'<circle cx="{px:.1f}" cy="{yy:.1f}" r="3.5" class="s-dot"/>')
+        b.append(f'<line x1="{px:.1f}" y1="{yy:.1f}" x2="{cardx - 2}" y2="{yy:.1f}" class="s-acc-ln" marker-end="url(#{m})"/>')
+        b.append(_tx(cardx + 18, yy - 8, k, "s-tm", "start")); b.append(_tx(cardx + 18, yy + 10, v, "s-t", "start"))
+    b.append(f'<line x1="{cardx + cardw}" y1="145" x2="{cardx + cardw + 30}" y2="145" class="s-ln" marker-end="url(#ar-ly2)"/>')
+    b.append(_marker("ar-ly2"))
+    rx = cardx + cardw + 34
+    b.append(f'<rect x="{rx}" y="96" width="176" height="98" rx="12" class="s-out"/>')
+    b.append(_tx(rx + 88, 124, "Savânica do Cerrado", "s-t s-on"))
+    b.append(_tx(rx + 88, 146, "define a combustão,", "s-tm s-on"))
+    b.append(_tx(rx + 88, 162, "os compartimentos e os", "s-tm s-on"))
+    b.append(_tx(rx + 88, 178, "fatores de emissão", "s-tm s-on"))
+    return _svg(930, 290, "As camadas de fogo do mês, cobertura do ano e bioma/estado são cruzadas pixel a pixel; "
+                "o pixel em destaque queimou em agosto, é formação savânica e está no Cerrado, em Goiás.", "".join(b),
+                caption="Três mapas sobrepostos: para cada pixel queimado no mês (em destaque), a cobertura daquele ano e o bioma "
+                        "definem quais parâmetros de queima se aplicam; o estado define onde a emissão é somada.")
+
+
+def svg_pools():
+    cats = ["Formação Florestal", "Formação Savânica", "Formação Campestre", "Campo Alagado e Área Pantanosa",
+            "Pastagem", "Agricultura"]
+    short = {"Campo Alagado e Área Pantanosa": "Campo alagado"}
+    first = next(iter(_pe.FATORES_POR_BIOMA.values()))
+    pools = [("AGB", "biomassa aérea", 40, 92), ("DW", "madeira morta", 138, 32), ("LI", "serrapilheira", 176, 24)]
+    x0, w, gap = 150, 118, 24
+    b = []
+    for k, name, y, h in pools:
+        b.append(_tx(x0 - 14, y + h / 2 + 4, name, "s-t2", "end"))
+    nat_end = x0 + 4 * (w + gap) - gap
+    b.append(f'<path d="M{x0},26 v-6 H{nat_end} v6" class="s-lnd"/>')
+    b.append(_tx((x0 + nat_end) / 2, 14, "formações nativas: mapa de carbono, pixel a pixel", "s-tm"))
+    ag0 = x0 + 4 * (w + gap)
+    ag_end = ag0 + 2 * (w + gap) - gap
+    b.append(f'<path d="M{ag0},26 v-6 H{ag_end} v6" class="s-lnd"/>')
+    b.append(_tx((ag0 + ag_end) / 2, 14, "agropecuária: média do bioma", "s-tm"))
+    for i, cat in enumerate(cats):
+        x = x0 + i * (w + gap)
+        col = _cover_color(cat)
+        coef = _pool_coefs(first[cat]["c_pool"])
+        if cat in _pe.ANTROPICAS:
+            b.append(f'<rect x="{x}" y="40" width="{w}" height="160" rx="6" fill="{col}" class="s-seam"/>')
+            b.append(_tx(x + w / 2, 116, "estoque médio", "s-t2 s-dark"))
+            b.append(_tx(x + w / 2, 132, "do bioma", "s-t2 s-dark"))
+        else:
+            for k, name, y, h in pools:
+                c = coef[k]
+                if c <= 0:
+                    b.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="5" class="s-no"/>')
+                    b.append(_tx(x + w / 2, y + h / 2 + 4, "não entra", "s-tm"))
+                elif c >= 1:
+                    b.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="5" fill="{col}" class="s-seam"/>')
+                else:
+                    fh = h * c
+                    b.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="5" class="s-no"/>')
+                    b.append(f'<rect x="{x}" y="{y + h - fh:.1f}" width="{w}" height="{fh:.1f}" rx="5" fill="{col}" class="s-seam"/>')
+                    b.append(_tx(x + w / 2, y + (h - fh) / 2 + 4, f"{_fmt(c * 100)}% entra", "s-t2"))
+        cfs = [v[cat]["cf"] for v in _pe.FATORES_POR_BIOMA.values()]
+        lo, hi = min(cfs), max(cfs)
+        rng = _fmt(lo, 2) if abs(hi - lo) < 1e-9 else f"{_fmt(lo, 2)}–{_fmt(hi, 2)}"
+        b.append(_tx(x + w / 2, 222, short.get(cat, cat.replace("Formação ", "")), "s-t"))
+        b.append(_tx(x + w / 2, 240, f"combustão {rng}", "s-op s-sm"))
+    return _svg(1000, 254, "Compartimentos de carbono por categoria: floresta usa madeira morta e serrapilheira; savana usa 26% "
+                "da biomassa aérea mais os resíduos; campos usam todos; pastagem e agricultura usam o estoque médio do bioma.",
+                "".join(b),
+                caption="O que pode queimar em cada tipo de vegetação. Áreas coloridas entram no cálculo; tracejadas não. "
+                        "Abaixo, o fator de combustão (a fração consumida pelo fogo), que varia por bioma. Alturas ilustrativas.")
+
+
+def svg_mass(cat="Formação Savânica"):
+    ef = {g: _pe.FATORES_POR_GAS[g][cat] for g in ("CO2", "CH4", "N2O")}
+    gwp = {"CO2": 1, **_pe.GWP_AR5}
+    ms = 1 / _pe.CARBON_FRACTION
+    mass_t = {g: ms * ef[g] / 1000 for g in ef}
+    co2e = {g: mass_t[g] * gwp[g] for g in ef}
+    tot = sum(co2e.values())
+    m = "ar-ms"
+    b = [_marker(m)]
+    b.append(f'<rect x="10" y="95" width="130" height="64" rx="10" class="s-in"/>')
+    b.append(_tx(75, 122, "1 t de carbono")); b.append(_tx(75, 141, "queimado", "s-tm"))
+    b.append(f'<line x1="140" y1="127" x2="196" y2="127" class="s-ln" marker-end="url(#{m})"/>')
+    b.append(_tx(168, 118, "÷ 0,47", "s-op"))
+    b.append(f'<rect x="200" y="95" width="140" height="64" rx="10" class="s-box"/>')
+    b.append(_tx(270, 122, f"{_fmt(ms, 2)} t")); b.append(_tx(270, 141, "de matéria seca", "s-tm"))
+    names = {"CO2": "CO₂", "CH4": "CH₄", "N2O": "N₂O"}
+    ys = {"CO2": 30, "CH4": 95, "N2O": 160}
+    scale = 300 / tot
+    for g in ("CO2", "CH4", "N2O"):
+        y = ys[g]
+        cy = y + 32
+        b.append(f'<path d="M340,127 C370,127 370,{cy} {418},{cy}" class="s-ln" marker-end="url(#{m})"/>')
+        b.append(f'<rect x="420" y="{y}" width="150" height="64" rx="10" class="s-box"/>')
+        massv = f"{_fmt(mass_t[g], 2)} t" if mass_t[g] >= 1 else f"{_fmt(mass_t[g] * 1000, 1 if mass_t[g] >= 0.001 else 2)} kg"
+        b.append(_tx(495, y + 26, f"{massv} de {names[g]}"))
+        b.append(_tx(495, y + 45, f"{_fmt(ef[g], 0 if ef[g] >= 100 else (1 if ef[g] >= 1 else 2))} g por kg", "s-tm"))
+        b.append(f'<line x1="570" y1="{cy}" x2="636" y2="{cy}" class="s-ln" marker-end="url(#{m})"/>')
+        b.append(_tx(603, cy - 7, f"× {gwp[g]}", "s-op"))
+        bw = max(co2e[g] * scale, 3)
+        b.append(f'<rect x="640" y="{cy - 11}" width="{bw:.1f}" height="22" rx="4" class="s-burn"/>')
+        b.append(_tx(640 + bw + 8, cy + 4, f"{_fmt(co2e[g], 2)} t CO₂e", "s-t2", "start"))
+    b.append(f'<line x1="640" y1="226" x2="{640 + tot * scale:.1f}" y2="226" class="s-acc-ln"/>')
+    b.append(_tx(640, 248, f"= {_fmt(tot, 2)} t CO₂e", "s-t", "start"))
+    return _svg(1000, 262, f"De 1 tonelada de carbono queimado em {cat.lower()}: {_fmt(ms, 2)} t de matéria seca, que emitem CO2, "
+                f"CH4 e N2O; convertidos pelo GWP, somam {_fmt(tot, 2)} t de CO2 equivalente.", "".join(b),
+                caption=f"O caminho de 1 tonelada de carbono queimado ({cat.lower()}). CH₄ e N₂O saem em quilos, "
+                        f"mas o GWP multiplica seu efeito: juntos, respondem por "
+                        f"{_fmt((co2e['CH4'] + co2e['N2O']) / tot * 100, 0)}% do CO₂e.")
+
+
+def svg_aggregate():
+    m = "ar-ag"
+    b = [_marker(m)]
+    S, P, F = (_cover_color(n) for n in ["Formação Savânica", "Pastagem", "Formação Florestal"])
+    cs, gx, gy = 22, 30, 36
+    burn = {(1, 1): S, (2, 1): S, (2, 2): S, (3, 2): S, (1, 3): P, (2, 4): P, (3, 4): P, (5, 1): F,
+            (6, 1): F, (6, 2): S, (5, 5): P, (6, 5): P, (6, 6): P, (2, 6): S}
+    for r in range(8):
+        for c in range(8):
+            fill = burn.get((c, r))
+            if fill:
+                b.append(f'<rect x="{gx + c * cs}" y="{gy + r * cs}" width="{cs}" height="{cs}" fill="{fill}" class="s-seam"/>')
+            else:
+                b.append(f'<rect x="{gx + c * cs}" y="{gy + r * cs}" width="{cs}" height="{cs}" class="s-cell s-seam"/>')
+    b.append(f'<line x1="{gx + 5 * cs}" y1="{gy - 6}" x2="{gx + 5 * cs}" y2="{gy + 8 * cs + 6}" class="s-uf"/>')
+    b.append(_tx(gx + 2.5 * cs, gy - 12, "Goiás", "s-t2")); b.append(_tx(gx + 6.5 * cs, gy - 12, "Minas Gerais", "s-t2"))
+    b.append(_tx(gx + 4 * cs, gy + 8 * cs + 26, "pixels queimados no mês (Cerrado)", "s-tm"))
+    b.append(f'<line x1="{gx + 8 * cs + 4}" y1="124" x2="246" y2="124" class="s-ln" marker-end="url(#{m})"/>')
+    b.append(f'<rect x="250" y="82" width="170" height="84" rx="10" class="s-box"/>')
+    b.append(_tx(335, 108, "cada pixel")); b.append(_tx(335, 128, "t CO₂e/ha × área", "s-op"))
+    b.append(_tx(335, 147, "≈ 0,09 ha", "s-tm"))
+    b.append(f'<line x1="420" y1="124" x2="486" y2="124" class="s-ln" marker-end="url(#{m})"/>')
+    b.append(_tx(453, 116, "Σ", "s-op"))
+    tx0, tw = 490, 400
+    b.append(f'<rect x="{tx0}" y="30" width="{tw}" height="190" rx="10" class="s-box"/>')
+    b.append(_tx(tx0 + 16, 54, "bioma · estado · classe · mês", "s-tm", "start"))
+    b.append(_tx(tx0 + tw - 16, 54, "t CO₂e", "s-tm", "end"))
+    b.append(f'<line x1="{tx0 + 12}" y1="62" x2="{tx0 + tw - 12}" y2="62" class="s-rule"/>')
+    def n(col, mg):
+        k = sum(1 for (c, _), v in burn.items() if v == col and (c >= 5) == mg)
+        return f"Σ de {k} pixel" + ("s" if k > 1 else "")
+    rows = [(S, "Cerrado · GO · Savânica · ago", n(S, False)), (P, "Cerrado · GO · Pastagem · ago", n(P, False)),
+            (F, "Cerrado · MG · Florestal · ago", n(F, True)), (S, "Cerrado · MG · Savânica · ago", n(S, True)),
+            (P, "Cerrado · MG · Pastagem · ago", n(P, True))]
+    for i, (col, lab, v) in enumerate(rows):
+        yy = 86 + i * 28
+        b.append(f'<rect x="{tx0 + 16}" y="{yy - 10}" width="12" height="12" rx="3" fill="{col}" class="s-seam"/>')
+        b.append(_tx(tx0 + 36, yy, lab, "s-t2", "start")); b.append(_tx(tx0 + tw - 16, yy, v, "s-t2", "end"))
+    return _svg(900, 252, "Cada pixel queimado tem sua emissão por hectare multiplicada pela área do pixel e somada por bioma, "
+                "estado, classe e mês, formando a tabela de estatísticas.", "".join(b),
+                caption="Do mapa à tabela: a emissão de cada pixel vira toneladas pela sua área real e é somada em cada "
+                        "combinação de bioma, estado, classe e mês. Essa tabela alimenta todos os gráficos do painel.")
+
+
+def svg_density():
+    b = []
+    dots = [(0.2, 0.3), (0.35, 0.6), (0.6, 0.25), (0.7, 0.7), (0.45, 0.45), (0.8, 0.4), (0.25, 0.8), (0.55, 0.85)]
+
+    def terr(x, y, size, name, area, dens):
+        out = [f'<rect x="{x}" y="{y}" width="{size}" height="{size}" rx="6" class="s-terr"/>']
+        for fx, fy in dots:
+            out.append(f'<rect x="{x + fx * size - 4:.1f}" y="{y + fy * size - 4:.1f}" width="8" height="8" rx="1.5" class="s-burn"/>')
+        tx = x + size + 18
+        out.append(_tx(tx, y + 18, name, "s-t", "start"))
+        out.append(_tx(tx, y + 40, "emissão: 2 milhões t CO₂e", "s-t2", "start"))
+        out.append(_tx(tx, y + 58, f"território: {area} km²", "s-t2", "start"))
+        out.append(_tx(tx, y + 84, f"densidade: {dens} t/km²", "s-op s-big", "start"))
+        return "".join(out)
+
+    b.append(terr(20, 16, 160, "Recorte grande", "40.000", "50"))
+    b.append(terr(470, 56, 80, "Recorte pequeno", "10.000", "200"))
+    return _svg(820, 196, "Dois recortes com a mesma emissão: o grande, de 40 mil km², tem densidade de 50 t por km²; "
+                "o pequeno, de 10 mil km², tem 200 t por km².", "".join(b), wide=False,
+                caption="Densidade = emissão ÷ área do território. A mesma emissão pesa quatro vezes mais num território "
+                        "quatro vezes menor; por isso a densidade permite comparar biomas e estados de tamanhos diferentes.")
+
+
+def svg_process():
+    m = "ar-pr"
+    b = [_marker(m)]
+    zones = [(10, 390, "Google Earth Engine"), (410, 590, "Google Drive"), (610, 990, "Publicação")]
+    for x1, x2, name in zones:
+        b.append(f'<rect x="{x1}" y="16" width="{x2 - x1}" height="150" rx="12" class="s-zone"/>')
+        b.append(_tx(x1 + 14, 38, name, "s-tm s-caps", "start"))
+    boxes = [(30, "Mapas de emissão", "um por mês · 3 gases"), (230, "Estatísticas", "bioma × estado × classe"),
+             (430, "Tabelas mensais", "uma por mês"), (630, "Base consolidada", "série completa, aberta"),
+             (840, "Painel", "gráficos e matrizes")]
+    labels = ["soma", "exporta", "reúne", "publica"]
+    for i, (x, t, sub) in enumerate(boxes):
+        last = i == len(boxes) - 1
+        b.append(f'<rect x="{x}" y="70" width="140" height="66" rx="10" class="{"s-out" if last else "s-box"}"/>')
+        b.append(_tx(x + 70, 98, t, "s-t s-on" if last else "s-t"))
+        b.append(_tx(x + 70, 117, sub, "s-tm s-on" if last else "s-tm"))
+        if not last:
+            nx = boxes[i + 1][0]
+            b.append(f'<line x1="{x + 140}" y1="103" x2="{nx - 2}" y2="103" class="s-ln" marker-end="url(#{m})"/>')
+            b.append(_tx((x + 140 + nx) / 2, 95, labels[i], "s-op"))
+    b.append(f'<path d="M910,136 V188 H100 V{140}" class="s-lnd" marker-end="url(#{m})"/>')
+    b.append(_tx(505, 182, "novo mês do MapBiomas Fogo: o ciclo se repete e a série é atualizada", "s-t2"))
+    return _svg(1000, 200, "Processo: mapas de emissão mensais e estatísticas no Google Earth Engine, tabelas mensais no Google "
+                "Drive, base consolidada e painel publicados; o ciclo se repete a cada novo mês.", "".join(b),
+                caption="Do satélite ao painel. Todo o cálculo pesado roda na nuvem; cada novo mês de área queimada passa "
+                        "pelas mesmas etapas, sem reprocessar a série.")
+
+
+def method_svgs():
+    return {"__SVG_OVERVIEW__": svg_overview(), "__SVG_LAYERS__": svg_layers(), "__SVG_POOLS__": svg_pools(),
+            "__SVG_MASS__": svg_mass(), "__SVG_AGG__": svg_aggregate(), "__SVG_DENS__": svg_density(),
+            "__SVG_PROCESS__": svg_process()}
+
+
 HTML_TEMPLATE = r"""<!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
@@ -385,6 +698,41 @@ table.mtab td { border-radius: 3px; font-variant-numeric: tabular-nums; }
 .mgrid2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .mgrid2 > * { min-width: 0; }
 @media (max-width: 860px) { .mgrid2 { grid-template-columns: 1fr; } .mhero h2 { font-size: 27px; } }
+/* ---- diagramas ---- */
+.dg { margin: 18px 0 8px; }
+.dg .sc { overflow-x: auto; }
+.dg svg { display: block; width: 100%; height: auto; font-family: inherit; }
+.dg.wide svg { min-width: 760px; }
+.dg figcaption { font-size: 12.5px; color: var(--muted); margin-top: 8px; max-width: 820px; }
+.s-box { fill: var(--surface); stroke: var(--axis); stroke-width: 1; }
+.s-in { fill: var(--accent-weak); }
+.s-out { fill: var(--accent); }
+.s-zone { fill: none; stroke: var(--axis); stroke-dasharray: 5 4; }
+.s-ln { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.s-lnd { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; }
+.s-acc-ln { stroke: var(--accent); stroke-width: 2; fill: none; }
+.s-acc-d { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 3 3; }
+.s-rule { stroke: var(--grid); stroke-width: 1; }
+.s-arw { fill: var(--muted); } .s-arw-a { fill: var(--accent); } .s-dot { fill: var(--accent); }
+.s-t { fill: var(--ink); font-size: 13px; font-weight: 650; }
+.s-t2 { fill: var(--ink-2); font-size: 12px; }
+.s-tm { fill: var(--muted); font-size: 11px; }
+.s-op { fill: var(--accent); font-size: 12px; font-weight: 700; }
+.s-big { font-size: 15px; } .s-sm { font-size: 11px; }
+.s-caps { text-transform: uppercase; letter-spacing: .06em; font-weight: 650; }
+.s-on { fill: var(--on-accent); }
+.s-dark { fill: #2a2119; }
+.s-seam { stroke: var(--seam); stroke-width: 0.6; }
+.s-cell { fill: var(--surface); }
+.s-burn { fill: var(--accent); }
+.s-bio1 { fill: #e3d3b4; } .s-bio2 { fill: #c9d6b6; }
+:root[data-theme="dark"] .s-bio1 { fill: #5c4a33; } :root[data-theme="dark"] .s-bio2 { fill: #3f5136; }
+:root[data-theme="dark"] .s-dark { fill: #2a2119; }
+.s-uf { stroke: var(--ink); stroke-width: 2; stroke-dasharray: 5 3; }
+.s-bline { stroke: var(--ink-2); stroke-width: 1.5; }
+.s-hl { fill: none; stroke: var(--ink); stroke-width: 2.5; }
+.s-no { fill: none; stroke: var(--axis); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.s-terr { fill: var(--accent-weak); stroke: var(--axis); }
 .clist { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; color: var(--ink-2); }
 .clist span { display: inline-flex; align-items: center; gap: 5px; }
 .clist i { width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--seam); display: inline-block; }
@@ -545,11 +893,18 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
       <div class="chips"><span class="chip">área queimada mensal</span><span class="chip">cobertura MapBiomas</span>
         <span class="chip">estoques de carbono</span><span class="chip">fator de combustão</span><span class="chip">CO₂ · CH₄ · N₂O</span><span class="chip">IPCC AR5</span></div>
       <nav class="mtoc" aria-label="Seções da metodologia">
-        <a href="#m-fontes">01 dados</a><a href="#m-pixel">02 pixel queimado</a><a href="#m-carbono">03 carbono queimado</a>
+        <a href="#m-visao">00 visão geral</a><a href="#m-fontes">01 dados</a><a href="#m-pixel">02 pixel queimado</a><a href="#m-carbono">03 carbono queimado</a>
         <a href="#m-biomassa">04 biomassa</a><a href="#m-gases">05 gases</a><a href="#m-calc">06 simule</a>
         <a href="#m-tabelas">07 estatísticas</a><a href="#m-fluxo">08 processo</a><a href="#m-limites">09 escopo</a>
       </nav>
     </div>
+
+    <section class="msec" id="m-visao">
+      <div class="mnum">00 / visão geral</div>
+      <h3>Do fogo ao número, em seis etapas.</h3>
+      <p>Cada pixel queimado no mês passa pela mesma sequência de operações. As seções seguintes detalham cada etapa.</p>
+      __SVG_OVERVIEW__
+    </section>
 
     <section class="msec" id="m-fontes">
       <div class="mnum">01 / dados</div>
@@ -568,10 +923,7 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
       <h3>Cada pixel queimado é identificado pela sua cobertura.</h3>
       <p>Para cada mês, identifica-se onde houve fogo e qual era a cobertura do solo naquele ano. As classes do MapBiomas são agrupadas
         em seis categorias de vegetação, cada uma com parâmetros próprios de queima.</p>
-      <div class="chain"><div class="term"><div class="v">fogo no mês</div><div class="u">MapBiomas Fogo</div></div><div class="op">+</div>
-        <div class="term"><div class="v">cobertura do ano</div><div class="u">MapBiomas</div></div><div class="op">+</div>
-        <div class="term"><div class="v">bioma</div><div class="u">IBGE</div></div><div class="op">→</div>
-        <div class="term out"><div class="v">categoria de queima</div><div class="u">parâmetros por bioma</div></div></div>
+      __SVG_LAYERS__
       <div class="cards" id="mClasses" style="margin-top:14px"></div>
     </section>
 
@@ -584,6 +936,7 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
       <div class="chain"><div class="term"><div class="v">estoque de carbono</div><div class="u">t C/ha</div></div><div class="op">×</div>
         <div class="term"><div class="v">fator de combustão</div><div class="u">fração consumida</div></div><div class="op">=</div>
         <div class="term out"><div class="v">carbono queimado</div><div class="u">t C/ha</div></div></div>
+      __SVG_POOLS__
       <div class="mgrid2" style="margin-top:14px">
         <div class="mcard"><div class="k">compartimentos de carbono considerados</div><table class="mtab" id="mPools"></table></div>
         <div class="mcard"><div class="k">fator de combustão por bioma</div><div style="overflow-x:auto"><table class="mtab" id="mCf"></table></div></div>
@@ -609,6 +962,7 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
         <div class="term"><div class="v">fator de emissão</div><div class="u">g de gás / kg</div></div><div class="op">×</div>
         <div class="term"><div class="v">GWP</div><div class="u">CH₄ 28 · N₂O 265</div></div><div class="op">=</div>
         <div class="term out"><div class="v">emissão</div><div class="u">t CO₂e</div></div></div>
+      __SVG_MASS__
       <div class="mcard" style="margin-top:14px"><div class="k">fatores de emissão (g por kg de matéria seca)</div><div style="overflow-x:auto"><table class="mtab" id="mEf"></table></div></div>
     </section>
 
@@ -633,25 +987,14 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
       <h3>Do mapa às estatísticas por território.</h3>
       <p>As estimativas por pixel são convertidas em toneladas considerando a área real de cada pixel e somadas por bioma, estado e classe de cobertura,
         mês a mês. A densidade de emissão, em toneladas por km² de território, permite comparar regiões de tamanhos diferentes.</p>
-      <div class="chain"><div class="term"><div class="v">emissão por hectare</div><div class="u">em cada pixel</div></div><div class="op">×</div>
-        <div class="term"><div class="v">área do pixel</div><div class="u">~0,09 ha</div></div><div class="op">Σ</div>
-        <div class="term"><div class="v">bioma × estado × classe</div><div class="u">por mês</div></div><div class="op">=</div>
-        <div class="term out"><div class="v">t CO₂e</div><div class="u">por recorte</div></div></div>
-      <div class="chain"><div class="term"><div class="v">t CO₂e</div><div class="u">do recorte</div></div><div class="op">÷</div>
-        <div class="term"><div class="v">área do território</div><div class="u">km²</div></div><div class="op">=</div>
-        <div class="term out"><div class="v">densidade</div><div class="u">t CO₂e/km²</div></div></div>
+      __SVG_AGG__
+      __SVG_DENS__
     </section>
 
     <section class="msec" id="m-fluxo">
       <div class="mnum">08 / processo</div>
       <h3>Um processo reprodutível, do satélite ao painel.</h3>
-      <div class="flow">
-        <div class="fstep"><div class="n">1</div><h4>Dados de entrada</h4><p>fogo mensal, cobertura, carbono e limites</p></div>
-        <div class="fstep"><div class="n">2</div><h4>Mapas de emissão</h4><p>um por mês, três gases, 30 m</p></div>
-        <div class="fstep"><div class="n">3</div><h4>Estatísticas</h4><p>por bioma, estado e classe</p></div>
-        <div class="fstep"><div class="n">4</div><h4>Base consolidada</h4><p>série completa, aberta para download</p></div>
-        <div class="fstep"><div class="n">5</div><h4>Painel</h4><p>consulta, filtros e matrizes</p></div>
-      </div>
+      __SVG_PROCESS__
     </section>
 
     <section class="msec" id="m-limites">
@@ -1368,6 +1711,8 @@ def main():
             .replace("__CSV_NAME__", Path(args.csv_href).name)
             .replace("__BUILD_DATE__", pd.Timestamp.now().strftime("%d/%m/%Y"))
             .replace("__DATA__", json.dumps(payload, ensure_ascii=False, separators=(",", ":"))))
+    for key, svg in method_svgs().items():
+        html = html.replace(key, svg)
     args.html.write_text(html, encoding="utf-8")
 
     print(f"CSV consolidado: {args.csv} ({len(df)} linhas)")
