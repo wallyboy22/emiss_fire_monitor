@@ -1,0 +1,50 @@
+bioma_id,Bioma,uf_id,SIGLA_UF,area_km2
+1,Amazônia,11,RO,234994.477
+1,Amazônia,12,AC,163962.704
+1,Amazônia,13,AM,1558480.359
+1,Amazônia,14,RR,223374.803
+1,Amazônia,15,PA,1236810.512
+1,Amazônia,16,AP,141971.142
+1,Amazônia,17,TO,24616.115
+1,Amazônia,21,MA,112401.482
+1,Amazônia,51,MT,511901.353
+2,Caatinga,22,PI,118733.377
+2,Caatinga,23,CE,148868.616
+2,Caatinga,24,RN,50747.282
+2,Caatinga,25,PB,52358.734
+2,Caatinga,26,PE,82583.093
+2,Caatinga,27,AL,13211.054
+2,Caatinga,28,SE,12138.67
+2,Caatinga,29,BA,351363.73
+2,Caatinga,31,MG,32610.563
+3,Cerrado,11,RO,2635.77
+3,Cerrado,15,PA,8711.112
+3,Cerrado,17,TO,252804.306
+3,Cerrado,21,MA,217059.472
+3,Cerrado,22,PI,133014.553
+3,Cerrado,29,BA,103434.399
+3,Cerrado,31,MG,317972.263
+3,Cerrado,35,SP,65177.697
+3,Cerrado,41,PR,3124.912
+3,Cerrado,50,MS,222249.812
+3,Cerrado,51,MT,337736.897
+3,Cerrado,52,GO,334700.711
+3,Cerrado,53,DF,5764.755
+4,Mata Atlântica,24,RN,2048.537
+4,Mata Atlântica,25,PB,4104.311
+4,Mata Atlântica,26,PE,15469.997
+4,Mata Atlântica,27,AL,14610.828
+4,Mata Atlântica,28,SE,9785.342
+4,Mata Atlântica,29,BA,109920.886
+4,Mata Atlântica,31,MG,235932.172
+4,Mata Atlântica,32,ES,46067.768
+4,Mata Atlântica,33,RJ,43722.337
+4,Mata Atlântica,35,SP,183010.05
+4,Mata Atlântica,41,PR,196143.124
+4,Mata Atlântica,42,SC,95302.035
+4,Mata Atlântica,43,RS,87689.414
+4,Mata Atlântica,50,MS,37422.779
+4,Mata Atlântica,52,GO,5540.47
+5,Pampa,43,RS,193933.607
+6,Pantanal,50,MS,97424.282
+6,Pantanal,51,MT,53515.005

@@ -1,9 +1,15 @@
 """
-Estatísticas de emissão de CO2 e uso/cobertura por Bioma × UF (IBGE)
+Estatísticas de emissões por gás (CO2, CH4, N2O) e uso/cobertura por Bioma × UF (IBGE)
 MapBiomas Fogo / IPAM
 
 Pipeline Python (Earth Engine), com export **por mês** (um CSV por `year_month`)
 e estatísticas cruzadas por bioma × UF × classe.
+
+Entrada: `FIRE_EMISS/v00` com três bandas em t/ha, geradas por `primeiro_ensaio.js`:
+  emiss_CO2 (t CO2), emiss_CO2e_CH4 e emiss_CO2e_N2O (t CO2e, GWP AR5: 28 e 265).
+Área e os três gases são somados numa única redução agrupada; o CO2e total é
+CO2 + CH4 + N2O (em CO2e). A versão anterior, de uma banda (carbono queimado,
+rotulado "Emissão CO2"), está em `reference/stats_do_primeiro_ensaio_uma_banda.py`.
 
 As legendas vieram de `users/geomapeamentoipam/MapBiomas__Fogo:00_Tools/Legends.js`
 (a API Python não suporta `require`), embutidas abaixo.
@@ -41,17 +47,29 @@ except ImportError:  # pragma: no cover
 PROJECT = "mapbiomas-brazil"
 
 VERSAO = "_2026"
-DESCRIPTION = "csv-monitor-mensal-emissoes-bioma-uf_col11" + VERSAO
+DESCRIPTION = "csv-monitor-mensal-emissoes-gases-v2-bioma-uf_col11" + VERSAO  # v2: biomassa = C / 0,47
 DRIVER_FOLDER = "monitoramento-sentinel"
 TASK_PREFIX = "WS_IPAM_MNEMISSOES-"
 
 SCALE = 30
 MAX_PIXELS = 1e12
 
+EMISS_COLLECTION = "projects/ee-ipam/assets/MAPBIOMAS/FIRE/MONITOR/FIRE_EMISS/v00"
+
+# banda do asset -> coluna do CSV (valores em t por pixel após multiplicar pela área)
+GAS_BANDS = ["emiss_CO2", "emiss_CO2e_CH4", "emiss_CO2e_N2O"]
+GAS_COLUMNS = {
+    "emiss_CO2": "Emissão CO2 (t)",
+    "emiss_CO2e_CH4": "Emissão CH4 (t CO2e)",
+    "emiss_CO2e_N2O": "Emissão N2O (t CO2e)",
+}
+TOTAL_COLUMN = "Emissão CO2e total (t)"
+
 EXPORT_SELECTORS = [
     "Ano", "id", "bioma_id", "Bioma", "uf_id", "UF", "SIGLA_UF", "class_int",
     "Níveis", "Nível 0", "Nível 1", "Nível 1_1", "Nível 2", "Nível 3", "Nível 4",
-    "Área ha", "Área km²", "Emissão CO2", "Situação", "Mês", "mes",
+    "Área ha", "Área km²", *GAS_COLUMNS.values(), TOTAL_COLUMN,
+    "Situação", "Mês", "mes",
 ]
 
 # ---------------------------------------------------------------------------
@@ -323,13 +341,17 @@ LULC_NIVEL_4 = None
 
 
 # ---------------------------------------------------------------------------
-# Redução agrupada por bioma, UF e classe
+# Redução agrupada por bioma, UF e classe (área + 3 gases numa só passada)
 # ---------------------------------------------------------------------------
-def run_reduction(value_image, bioma_image, uf_image, class_image, convert_fn, geometry, scale):
-    reducer = (ee.Reducer.sum().group(1, "class").group(1, "uf")
-               .group(1, "bioma"))
+N_VALUES = 1 + len(GAS_BANDS)  # área + gases
 
-    image_to_reduce = (value_image.addBands(bioma_image).addBands(uf_image)
+
+def run_reduction(values_image, bioma_image, uf_image, class_image, geometry, scale):
+    """values_image: bandas [area_ha, *GAS_BANDS], todas com a mesma máscara de fogo."""
+    reducer = (ee.Reducer.sum().repeat(N_VALUES)
+               .group(N_VALUES, "class").group(N_VALUES, "uf").group(N_VALUES, "bioma"))
+
+    image_to_reduce = (values_image.addBands(bioma_image).addBands(uf_image)
                        .addBands(class_image.rename("class")))
 
     reduced_data = image_to_reduce.reduceRegion(
@@ -343,10 +365,10 @@ def run_reduction(value_image, bioma_image, uf_image, class_image, convert_fn, g
         ee.Algorithms.If(reduced_data.contains("groups"), reduced_data.get("groups"), ee.List([]))
     )
 
-    return ee.FeatureCollection(groups.map(convert_fn)).flatten()
+    return ee.FeatureCollection(groups.map(convert_table)).flatten()
 
 
-def convert_area_table(obj):
+def convert_table(obj):
     obj = ee.Dictionary(obj)
     biome_id = obj.getNumber("bioma").int()
     biome_key = biome_id.format()
@@ -363,9 +385,14 @@ def convert_area_table(obj):
             raw_class = class_obj.getNumber("class").int()
             month = raw_class.mod(100)
             class_id = raw_class.divide(100).int()
-            area_ha_val = class_obj.getNumber("sum")
+            sums = ee.List(class_obj.get("sum"))
+            area_ha_val = ee.Number(sums.get(0))
+            gas_vals = [ee.Number(sums.get(i + 1)) for i in range(len(GAS_BANDS))]
+            total = gas_vals[0]
+            for value in gas_vals[1:]:
+                total = total.add(value)
             fid = biome_key.cat("_").cat(uf_key).cat("_").cat(raw_class.format())
-            return (ee.Feature(None).set("id", fid).set("bioma_id", biome_id)
+            feat = (ee.Feature(None).set("id", fid).set("bioma_id", biome_id)
                     .set("Bioma", BIOMAS_LEGEND.get(biome_key)).set("uf_id", uf_id)
                     .set("UF", UF_NAMES.get(uf_key)).set("SIGLA_UF", UF_SIGLAS.get(uf_key))
                     .set("class_int", class_id).set("Níveis", LULC_NIVEIS.get(class_id))
@@ -376,31 +403,13 @@ def convert_area_table(obj):
                     .set("Nível 3", LULC_NIVEL_3.get(class_id))
                     .set("Nível 4", LULC_NIVEL_4.get(class_id))
                     .set("Área ha", area_ha_val).set("Área km²", area_ha_val.divide(100))
+                    .set(TOTAL_COLUMN, total)
                     .set("Situação", FOGO_SITUATION_MONTH.get(month))
                     .set("Mês", FOGO_MONTHS_STR.get(month))
                     .set("mes", FOGO_MONTHS_INT.get(month)))
-
-        return ee.FeatureCollection(class_groups.map(to_feature))
-
-    return ee.FeatureCollection(uf_groups.map(convert_uf)).flatten()
-
-
-def convert_emiss_table(obj):
-    obj = ee.Dictionary(obj)
-    biome_id = obj.getNumber("bioma").int()
-    biome_key = biome_id.format()
-    uf_groups = ee.List(obj.get("groups"))
-
-    def convert_uf(uf_obj):
-        uf_obj = ee.Dictionary(uf_obj)
-        uf_id = uf_obj.getNumber("uf").int()
-        class_groups = ee.List(uf_obj.get("groups"))
-
-        def to_feature(class_obj):
-            class_obj = ee.Dictionary(class_obj)
-            raw_class = class_obj.getNumber("class").int()
-            fid = biome_key.cat("_").cat(uf_id.format()).cat("_").cat(raw_class.format())
-            return ee.Feature(None).set("id", fid).set("Emissão CO2", class_obj.getNumber("sum"))
+            for band, value in zip(GAS_BANDS, gas_vals):
+                feat = feat.set(GAS_COLUMNS[band], value)
+            return feat
 
         return ee.FeatureCollection(class_groups.map(to_feature))
 
@@ -447,8 +456,8 @@ def build_inputs():
 
     # Emissões convertidas para total por pixel
     monitor_emiss = (
-        ee.ImageCollection("projects/ee-ipam/assets/MAPBIOMAS/FIRE/MONITOR/FIRE_EMISS/v00")
-        .map(lambda img: img.multiply(area_ha).float().copyProperties(img))
+        ee.ImageCollection(EMISS_COLLECTION)
+        .map(lambda img: img.select(GAS_BANDS).multiply(area_ha).float().copyProperties(img))
     )
 
     # LULC Coleção 11 (* 100 para compor com o mês)
@@ -481,33 +490,18 @@ def process_month(year, month, area_ha, monitor_emiss, lulc, img_biomas, img_ufs
     ym_str = f"{year}_{month:02d}"
     lulc_year = lulc.select("classification_" + str(year))
 
-    temp_emiss = monitor_emiss.filter(ee.Filter.eq("year_month", ym_str)).mosaic()
-    fire_mask = temp_emiss.gt(0)
-    temp_emiss = temp_emiss.updateMask(fire_mask).rename("emiss")
+    gases = monitor_emiss.filter(ee.Filter.eq("year_month", ym_str)).mosaic()
+    # Pixel com fogo e emissão: mesmo critério da versão de uma banda (valor > 0),
+    # aplicado à soma dos gases; todas as bandas compartilham essa máscara.
+    fire_mask = gases.reduce(ee.Reducer.sum()).gt(0)
+    gases = gases.unmask(0).updateMask(fire_mask)
     fire_month = ee.Image(month).updateMask(fire_mask).rename("month")
 
-    fire_cover_month = fire_month.add(lulc_year).updateMask(fire_month.mask())
-    fire_area = area_ha.updateMask(fire_month.mask())
+    fire_cover_month = fire_month.add(lulc_year).updateMask(fire_mask)
+    values = area_ha.rename("area").updateMask(fire_mask).addBands(gases)
 
-    # 1. Redução de área
-    area_fc = run_reduction(fire_area, img_biomas, img_ufs, fire_cover_month,
-                            convert_area_table, geometry, scale)
-
-    # 2. Redução de emissão
-    emiss_fc = run_reduction(temp_emiss, img_biomas, img_ufs, fire_cover_month,
-                             convert_emiss_table, geometry, scale)
-
-    # 3. Join por chave composta (bioma_classeMes)
-    join_filter = ee.Filter.equals(leftField="id", rightField="id")
-    join = ee.Join.saveFirst(matchKey="match_emiss")
-    joined_fc = join.apply(area_fc, emiss_fc, join_filter)
-
-    def add_emission(feat):
-        emiss_match = ee.Feature(feat.get("match_emiss"))
-        emiss_val = ee.Algorithms.If(feat.get("match_emiss"), emiss_match.get("Emissão CO2"), 0)
-        return feat.set("Emissão CO2", emiss_val).set("Ano", year)
-
-    return joined_fc.map(add_emission)
+    fc = run_reduction(values, img_biomas, img_ufs, fire_cover_month, geometry, scale)
+    return fc.map(lambda feat: feat.set("Ano", year))
 
 
 def main():

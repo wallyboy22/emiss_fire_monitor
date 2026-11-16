@@ -5,11 +5,12 @@ Este é o repositório principal do monitor de emissões. Os scripts usados no E
 ## Artefatos
 
 - [`index.html`](index.html): dashboard autocontido, com dados e Chart.js embutidos; funciona localmente e no GitHub Pages.
-- [`data/consolidado_monitor_emissoes_bioma_uf.csv`](data/consolidado_monitor_emissoes_bioma_uf.csv): tabela mensal para Looker Studio e para reconstruir o dashboard.
+- [`data/consolidado_monitor_emissoes_gases_bioma_uf.csv`](data/consolidado_monitor_emissoes_gases_bioma_uf.csv): tabela mensal (CO₂, CH₄ e N₂O em CO₂e) para Looker Studio e para reconstruir o dashboard.
+- [`data/area_territorio_bioma_uf.csv`](data/area_territorio_bioma_uf.csv): área do território por bioma × UF, usada no cálculo de densidade (t/km²).
 - [`src/`](src/): builder Python e pipeline de estatísticas/exportação.
 - [`gee/`](gee/): script atual do primeiro ensaio (saída mensal com três bandas), referência da versão anterior de uma banda e script de investigação dos mapas de carbono. Os scripts do Code Editor também são mantidos no repositório GEE auxiliar.
 
-O consolidado contém 32.351 linhas, 93 meses (2019-01 a 2026-09) e 27 UFs. Cada linha representa a agregação mensal por bioma, UF e classe. No Looker Studio, conecte o CSV acima e use `Ano`, `mes`, `Bioma`, `SIGLA_UF` e as classes como dimensões; `Área km²` e `Emissão CO2` são métricas somáveis.
+O consolidado contém 32.768 linhas, 94 meses (2019-01 a 2026-10) e 27 UFs. No total do período: 134,5 Mha queimados e 3,65 Gt CO₂e (CO₂ 3,37 Gt; CH₄ 176 Mt CO₂e; N₂O 108 Mt CO₂e). Cada linha representa a agregação mensal por bioma, UF e classe. No Looker Studio, conecte o CSV acima e use `Ano`, `mes`, `Bioma`, `SIGLA_UF` e as classes como dimensões; `Área km²`, `Emissão CO2 (t)`, `Emissão CH4 (t CO2e)`, `Emissão N2O (t CO2e)` e `Emissão CO2e total (t)` são métricas somáveis.
 
 ## Reconstruir o dashboard
 
@@ -21,6 +22,8 @@ python src/build_dashboard.py
 O builder usa o CSV consolidado versionado. Se CSVs mensais forem colocados em `data/monthly/`, eles serão usados em preferência ao consolidado. O HTML resultante é escrito em `index.html` e não busca CSV, CDN ou outros recursos externos.
 
 ## Earth Engine
+
+`src/primeiro_ensaio.py` é a versão Python de `gee/primeiro_ensaio.js` e exporta as imagens mensais de emissão (`--submit`; sem a opção, apenas lista; `--test` compara com o asset publicado). A biomassa seca é obtida do carbono por `carbono / 0,47`.
 
 `src/stats_do_primeiro_ensaio.py` exporta tabelas mensais por Bioma × UF × classe. Requer Earth Engine autenticado localmente. A opção `--submit` inicia tarefas remotas; sem ela, o script apenas lista as tarefas. As exportações são destinadas à pasta Drive `monitoramento-sentinel`.
 

@@ -180,7 +180,11 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
 
         var factor_carbon_biomass = 0.47;
 
-        var biomass_calculate_ton_ha = calculate.multiply(factor_carbon_biomass);
+        // Corrigido em 2026-11: o mapa de carbono está em t C/ha e os fatores de emissão
+        // são g/kg de matéria seca; biomassa = carbono / 0,47. A versão com multiply
+        // subestimava as emissões em ~4,5x (1/0,47²).
+        // var biomass_calculate_ton_ha = calculate.multiply(factor_carbon_biomass);
+        var biomass_calculate_ton_ha = calculate.divide(factor_carbon_biomass);
 
         var area_ha = ee.Image.pixelArea().divide(10000);
 
@@ -244,6 +248,7 @@ monthly_burned.aggregate_array('name').sort().evaluate(function(monthly_list){
       //.selfMask()
       .set({
         "metric":'CO2 equivalent',
+        "biomass_from_carbon":"carbon / 0.47",
         "unit":"t/ha",
         "month":description.slice(-2),
         "year_month":description.slice(-7),
