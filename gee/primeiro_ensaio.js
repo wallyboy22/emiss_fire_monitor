@@ -11,7 +11,9 @@ print('historical_carbon',historical_carbon);
 // OBS: O fator de combustão (cf) utilizado de maneira padronizada para Agricultura
 // é o fator utilizado para algodão no terceiro inventario (0.9). O mesmo utilizado pelo IMAFLORA
 
-//atenção na camada de carbono: c_pool ´é usado para Agricultura e Pastagem, c_mean ´é usado para cobertura de nativas
+// atenção na camada de carbono: nas nativas (Formação Florestal, Savânica, Campestre e Campo Alagado)
+// usa-se o mapa c_rect_col11_2019, combinando os estoques pela expressão c_pool; em Agricultura e
+// Pastagem usa-se a média c_mean do bioma como AGB (c_pool = "AGB").
 
 var fatoresEmissaoPorBioma = {
   "Amazônia": {
