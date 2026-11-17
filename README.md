@@ -12,10 +12,16 @@ Este é o repositório principal do monitor de emissões. Os scripts usados no E
 
 O consolidado contém 32.768 linhas, 94 meses (2019-01 a 2026-10) e 27 UFs. No total do período: 134,5 Mha queimados e 3,65 Gt CO₂e (CO₂ 3,37 Gt; CH₄ 176 Mt CO₂e; N₂O 108 Mt CO₂e). Cada linha representa a agregação mensal por bioma, UF e classe. No Looker Studio, conecte o CSV acima e use `Ano`, `mes`, `Bioma`, `SIGLA_UF` e as classes como dimensões; `Área km²`, `Emissão CO2 (t)`, `Emissão CH4 (t CO2e)`, `Emissão N2O (t CO2e)` e `Emissão CO2e total (t)` são métricas somáveis.
 
-## Comparação externa e incerteza
+## Destaques do mês
+
+[`destaques.html`](https://wallyboy22.github.io/emiss_fire_monitor/destaques.html) é um relatório mensal no formato dos destaques do Monitor do Fogo, com a emissão ao lado da área queimada em cada bloco: Brasil (mês e acumulado do ano), biomas e estados (mapa e ranking), o bioma e o estado que mais emitiram, e uma página sobre o que a emissão acrescenta à área (emissão por hectare, gases, coberturas). O mês vem do seletor ou de `?m=AAAA-MM` (o painel abre os destaques do último mês do período filtrado); sem parâmetro, mostra o último mês disponível. A página consulta a API pública do Monitor do Fogo para comparar a área do mês com a base de cálculo da emissão, e o botão de impressão gera um PDF de 6 páginas em A4 paisagem.
+
+- [`src/destaques.py`](src/destaques.py): gera a página, chamado pelo `build_dashboard.py`.
+- [`src/geometrias.py`](src/geometrias.py): baixa e simplifica os contornos de biomas (IBGE, via GEE) e UFs (malha do IBGE) para `data/geo/`; rode uma vez.
+
+## Comparação externa
 
 - [`src/comparacao_externa.py`](src/comparacao_externa.py): soma o GFED5.1 (Zenodo), o SEEG 14 (fogo em vegetação nativa, CSVs do Drive) e o CAMS GFAS (API do ADS, requer chave) no Brasil, com máscara dos limites do IBGE, e grava [`data/externo/comparacao_anual.csv`](data/externo/comparacao_anual.csv) (área queimada em ha; CO₂, CH₄, N₂O e matéria seca em t). O dashboard mostra a comparação quando esse arquivo existe.
-- A faixa de incerteza (95%) combina os desvios relativos de área queimada, estoque de carbono, fator de combustão, fração de carbono e fatores de emissão; os parâmetros estão em `src/build_dashboard.py` (`UNC_*`) e na seção 10 da página de método.
 
 ## Reconstruir o dashboard
 

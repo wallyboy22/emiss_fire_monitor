@@ -19,6 +19,7 @@ import pandas as pd
 import sys as _sys
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
 import primeiro_ensaio as _pe  # noqa: E402  (fatores usados nas imagens; fonte única para a página de método)
+import destaques as _dq  # noqa: E402  (página "Destaques do mês")
 
 HERE = Path(__file__).resolve().parent
 if HERE.name == "src":  # repositório público
@@ -30,6 +31,7 @@ if HERE.name == "src":  # repositório público
         "chart_js": ROOT / "assets" / "chart.umd.min.js",
         "csv_href": "data/consolidado_monitor_emissoes_gases_bioma_uf.csv",
         "territory": ROOT / "data" / "area_territorio_bioma_uf.csv",
+        "geo": ROOT / "data" / "geo",
     }
 else:  # CCAL/MONITOR_EMISSOES/v00
     DEFAULTS = {
@@ -39,6 +41,7 @@ else:  # CCAL/MONITOR_EMISSOES/v00
         "chart_js": HERE / "chart.umd.min.js",
         "csv_href": "consolidado_monitor_emissoes_gases_bioma_uf.csv",
         "territory": HERE / "area_territorio_bioma_uf.csv",
+        "geo": HERE / "geo",
     }
 
 # Ordem = ordem das cores categóricas validadas (os três biomas que mais emitem ficam nas três primeiras)
@@ -173,29 +176,8 @@ def build_payload(df, territory):
     cover = COVER + ([COVER_OTHER] if set(df["Nível 1_1"]) - known else [])
     return {"months": months, "biomes": BIOMES, "ufs": uf_list, "classes": class_list,
             "facts": facts, "territory": terr, "cover": cover, "cover_short": COVER_SHORT,
-            "method": method_payload(), "unc": unc_payload(class_list),
+            "method": method_payload(),
             "dm_year": {str(int(k)): round(float(v), 1) for k, v in monitor_dry_matter(df).items()}}
-
-
-# ---------------- incerteza ----------------
-# Desvio-padrão relativo de cada componente (tratado como desvio em log). A emissão é um produto
-# (área × estoque × combustão ÷ 0,47 × fator de emissão × GWP), então os desvios se combinam em
-# quadratura dentro de cada classe e gás. Entre linhas, os limites são somados (erros sistemáticos,
-# totalmente correlacionados), o que dá uma faixa conservadora.
-UNC_Z = 1.96
-UNC_AREA = (0.10, "premissa", "Área queimada (MapBiomas Fogo)")
-UNC_FC = (0.03, "IPCC 2006: 0,47 (0,44 a 0,49)", "Fração de carbono da matéria seca")
-UNC_STOCK = {"nativa": (0.30, "premissa", "Estoque de carbono, mapa (formações nativas)"),
-             "agro": (0.40, "premissa", "Biomassa aérea média do bioma (pastagem e agricultura)")}
-UNC_CF = (0.20, "premissa", "Fator de combustão")
-_EF_SAV = {"CO2": 95 / 1613, "CH4": 0.9 / 2.3, "N2O": 0.10 / 0.21}
-UNC_EF = {  # IPCC 2006, vol. 4, tab. 2.5 (média ± DP); onde a tabela não traz DP, premissa de 50%
-    "Formação Florestal": {"CO2": 90 / 1580, "CH4": 2.0 / 6.8, "N2O": 0.5},
-    "Formação Savânica": _EF_SAV, "Formação Campestre": _EF_SAV,
-    "Campo Alagado e Área Pantanosa": _EF_SAV, "Pastagem": _EF_SAV,
-    "Agricultura": {"CO2": 177 / 1515, "CH4": 0.5, "N2O": 0.5},
-}
-UNC_EF_SRC = "IPCC 2006, vol. 4, tab. 2.5 (DP publicado); 50% onde não há DP"
 
 
 def _class_category():
@@ -206,29 +188,6 @@ def _class_category():
     return out
 
 
-def unc_sigma(cat, gas):
-    stock = UNC_STOCK["agro" if cat in _pe.ANTROPICAS else "nativa"][0]
-    ef = UNC_EF.get(cat, _EF_SAV)[gas]
-    return (UNC_AREA[0] ** 2 + UNC_FC[0] ** 2 + stock ** 2 + UNC_CF[0] ** 2 + ef ** 2) ** 0.5
-
-
-def unc_payload(class_list):
-    cc = _class_category()
-    sig = [[round(unc_sigma(cc.get(c["id"], "Formação Savânica"), g), 4) for g in ("CO2", "CH4", "N2O")]
-           for c in class_list]
-    pct = lambda v: f"{_fmt(v * 100)}%"
-    rows = [[UNC_AREA[2], pct(UNC_AREA[0]), UNC_AREA[1]],
-            [UNC_STOCK["nativa"][2], pct(UNC_STOCK["nativa"][0]), UNC_STOCK["nativa"][1]],
-            [UNC_STOCK["agro"][2], pct(UNC_STOCK["agro"][0]), UNC_STOCK["agro"][1]],
-            [UNC_CF[2], pct(UNC_CF[0]), UNC_CF[1]],
-            [UNC_FC[2], pct(UNC_FC[0]), UNC_FC[1]],
-            ["Fator de emissão de CO₂", f"{pct(min(v['CO2'] for v in UNC_EF.values()))} a {pct(max(v['CO2'] for v in UNC_EF.values()))}", UNC_EF_SRC],
-            ["Fator de emissão de CH₄", f"{pct(min(v['CH4'] for v in UNC_EF.values()))} a {pct(max(v['CH4'] for v in UNC_EF.values()))}", UNC_EF_SRC],
-            ["Fator de emissão de N₂O", f"{pct(min(v['N2O'] for v in UNC_EF.values()))} a {pct(max(v['N2O'] for v in UNC_EF.values()))}", UNC_EF_SRC]]
-    return {"z": UNC_Z, "sig": sig, "rows": rows}
-
-
-# ---------------- comparação externa ----------------
 EXTERNAL_DEFAULT = HERE / ("../data/externo/comparacao_anual.csv" if HERE.name == "src" else "externo/comparacao_anual.csv")
 
 
@@ -905,7 +864,7 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
     <div class="meta" id="meta"></div>
     </div>
     <div class="hdr-right">
-      <nav class="tabs" aria-label="Páginas"><a href="#painel" id="tabPainel">Painel</a><a href="#metodo" id="tabMetodo">Método</a></nav>
+      <nav class="tabs" aria-label="Páginas"><a href="#painel" id="tabPainel">Painel</a><a href="#metodo" id="tabMetodo">Método</a><a href="destaques.html" id="tabDestaques" title="Relatório do mês selecionado: área queimada e emissões">Destaques do mês</a></nav>
       <div class="seg small" id="fTheme" role="group" aria-label="Tema"></div>
     </div>
   </header>
@@ -931,7 +890,7 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
 
   <section class="grid kpis" role="radiogroup" aria-label="Medida mostrada nos gráficos">
     <div class="card tile sel" id="tArea" data-m="area"><div class="label">Área queimada</div><div class="value" id="kArea"></div><div class="note" id="kAreaNote"></div><div class="pick"></div></div>
-    <div class="card tile hero sel" id="tEmiss" data-m="emiss"><div class="label" id="kEmissLabel">Emissão</div><div class="value" id="kEmiss"></div><div class="note" id="kEmissNote"></div><div class="unc" id="kEmissUnc"></div><div class="unc" id="kEmissGas"></div><div class="pick"></div></div>
+    <div class="card tile hero sel" id="tEmiss" data-m="emiss"><div class="label" id="kEmissLabel">Emissão</div><div class="value" id="kEmiss"></div><div class="note" id="kEmissNote"></div><div class="unc" id="kEmissGas"></div><div class="pick"></div></div>
     <div class="card tile sel" id="tInt" data-m="int"><div class="label" id="kIntLabel">Emissão por hectare queimado</div><div class="value" id="kInt"></div><div class="note" id="kIntNote"></div><div class="pick"></div></div>
     <div class="card tile sel" id="tDens" data-m="dens"><div class="label" id="kDensLabel">Emissão por hectare de território</div><div class="value" id="kDens"></div><div class="note" id="kDensNote"></div><div class="pick"></div></div>
     <div class="card tile"><div class="label" id="kLastLabel">Último mês</div><div class="value" id="kLast"></div><div class="note" id="kLastNote"></div></div>
@@ -1050,7 +1009,7 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
       <nav class="mtoc" aria-label="Seções da metodologia">
         <a href="#m-visao">00 visão geral</a><a href="#m-fontes">01 dados</a><a href="#m-pixel">02 pixel queimado</a><a href="#m-carbono">03 carbono queimado</a>
         <a href="#m-biomassa">04 biomassa</a><a href="#m-gases">05 gases</a><a href="#m-calc">06 simule</a>
-        <a href="#m-tabelas">07 estatísticas</a><a href="#m-fluxo">08 processo</a><a href="#m-limites">09 escopo</a><a href="#m-incerteza">10 incerteza</a>
+        <a href="#m-tabelas">07 estatísticas</a><a href="#m-fluxo">08 processo</a><a href="#m-limites">09 escopo</a><a href="#m-incerteza">10 limites</a>
       </nav>
     </div>
 
@@ -1165,13 +1124,17 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
     </section>
 
     <section class="msec" id="m-incerteza">
-      <div class="mnum">10 / incerteza</div>
-      <h3>Uma faixa, não só um número.</h3>
-      <p>Cada parâmetro da cadeia tem incerteza própria. Como a emissão é um produto de fatores, os desvios relativos se combinam
-        em quadratura para cada classe e gás, e a faixa de 95% segue uma distribuição log-normal. Os erros dos parâmetros são
-        tratados como sistemáticos, isto é, iguais em todos os pixels de uma classe, o que torna a faixa conservadora.</p>
-      <div class="mcard"><div class="k">desvio relativo de cada componente</div><div style="overflow-x:auto"><table class="mtab" id="mUnc"></table></div></div>
-      <p class="note" id="mUncTot" style="margin-top:10px;font-size:13.5px;color:var(--ink-2)"></p>
+      <div class="mnum">10 / limites da estimativa</div>
+      <h3>Ordem de grandeza, não casa decimal.</h3>
+      <p>A emissão é o produto de área queimada, estoque de carbono, fator de combustão e fatores de emissão. Cada um desses
+        termos tem incerteza própria, e ela não é a mesma em todos os biomas e classes. Os números do painel são a estimativa central.</p>
+      <div class="cards">
+        <div class="mcard"><h4>Área queimada</h4><p>Cicatrizes pequenas ou sob nuvens podem escapar do mapeamento mensal; bases que modelam pequenos fogos chegam a áreas maiores.</p></div>
+        <div class="mcard"><h4>Estoque de carbono</h4><p>É a maior fonte de variação: florestas e savanas densas concentram a emissão, e o estoque de referência é o de 2019.</p></div>
+        <div class="mcard"><h4>Fator de combustão</h4><p>A fração da biomassa que de fato queima varia com a umidade, o tipo de fogo e a recorrência.</p></div>
+        <div class="mcard"><h4>Fatores de emissão</h4><p>Valores médios do IPCC por tipo de vegetação; queimas com mais fumaça e menos chama emitem mais CH₄ por tonelada.</p></div>
+      </div>
+      <p>A comparação com GFED5.1 e SEEG, no painel, mostra onde o monitor fica em relação a outras estimativas independentes.</p>
     </section>
 
     <div class="mfoot"><span>MapBiomas Fogo · IPAM</span><a href="#mtopo">voltar ao topo ↑</a></div>
@@ -1233,10 +1196,6 @@ const OTHER = coverIdx['Outras classes'];
 const CLASS_COVER = DATA.classes.map(c => coverIdx[c['Nível 1_1']] ?? OTHER);
 const coverColor = k => COVER[k][1];
 const IS_NAT = DATA.classes.map(c => c['Nível 0'] === 'Natural');
-// fatores de incerteza (IC 95%, log-normal) por classe e gás
-const UZ = DATA.unc.z;
-const ULO = DATA.unc.sig.map(r => r.map(sg => Math.exp(-UZ * sg)));
-const UHI = DATA.unc.sig.map(r => r.map(sg => Math.exp(UZ * sg)));
 // filtro de cobertura: all | nat | ant | g<k>
 function coverPass(ci) {
   const v = S.cover;
@@ -1390,8 +1349,7 @@ function aggregate() {
     nD: DETAIL[S.group].n(),
     uA: new Float64Array(DATA.ufs.length), uE: new Float64Array(DATA.ufs.length),
     cA: {}, cE: {}, nat: { A: 0, E: 0 }, ant: { A: 0, E: 0 },
-    gas: [0, 0, 0], A: 0, E: 0, Elo: 0, Ehi: 0,
-    mLo: new Float64Array(NM), mHi: new Float64Array(NM),
+    gas: [0, 0, 0], A: 0, E: 0,
     T: territory(bSel, uSel),
     uT: DATA.ufs.map((_, u) => territory(bSel, u)),
   };
@@ -1405,16 +1363,12 @@ function aggregate() {
     if (!coverPass(F.c[i])) continue;
     const m = F.m[i], a = F.a[i], c2 = F.co2[i], c4 = F.ch4[i], n2 = F.n2o[i];
     const e = g === 'total' ? c2 + c4 + n2 : g === 'co2' ? c2 : g === 'ch4' ? c4 : n2;
-    const lo = ULO[F.c[i]], hi = UHI[F.c[i]];
-    const eLo = g === 'total' ? c2 * lo[0] + c4 * lo[1] + n2 * lo[2] : g === 'co2' ? c2 * lo[0] : g === 'ch4' ? c4 * lo[1] : n2 * lo[2];
-    const eHi = g === 'total' ? c2 * hi[0] + c4 * hi[1] + n2 * hi[2] : g === 'co2' ? c2 * hi[0] : g === 'ch4' ? c4 * hi[1] : n2 * hi[2];
-    R.mLo[m] += eLo; R.mHi[m] += eHi;
     R.mA[m * NB + b] += a; R.mE[m * NB + b] += e;
     R.mG[m * 3] += c2; R.mG[m * 3 + 1] += c4; R.mG[m * 3 + 2] += n2;
     const ck = CLASS_COVER[F.c[i]]; R.mCA[m * NC + ck] += a; R.mCE[m * NC + ck] += e;
     const dk = dKey(i); R.dA[m * R.nD + dk] += a; R.dE[m * R.nD + dk] += e;
     if (m < m0 || m > m1) continue;
-    R.A += a; R.E += e; R.Elo += eLo; R.Ehi += eHi;
+    R.A += a; R.E += e;
     R.gas[0] += c2; R.gas[1] += c4; R.gas[2] += n2;
     R.uA[u] += a; R.uE[u] += e;
     const cl = DATA.classes[F.c[i]], k = cl['Nível 1_1'];
@@ -1646,18 +1600,9 @@ function renderMonthly(R) {
     ...barStyle(sr.color, { seam: true, flat: true }),
   }));
   cMonthly.options.scales.x.stacked = cMonthly.options.scales.y.stacked = true;
-  // total do recorte em cima de cada pilha; faixa de incerteza (95%) quando há até 36 barras
-  const showUnc = (ms === 'emiss' || ms === 'dens') && TB.length <= 36;
-  const fU = ms === 'dens' ? (R.T > 0 ? 1 / R.T : 0) : 1;
-  cMonthly.$stackTotals = true;
-  cMonthly.$err = showUnc ? TB.map(t => { let lo = 0, hi = 0, e = 0;
-    t.ms.forEach(m => { lo += R.mLo[m]; hi += R.mHi[m]; e += monthSum(R, m)[1]; }); return e > 0 ? [lo * fU, hi * fU] : null; }) : null;
-  const his = (cMonthly.$err || []).filter(Boolean).map(r => r[1]);
-  cMonthly.options.scales.y.suggestedMax = his.length ? Math.max(...his) * 1.1 : undefined;
-  cMonthly.options.plugins.tooltip.callbacks.afterFooter = items => {
-    const r = cMonthly.$err && cMonthly.$err[items[0].dataIndex];
-    return r ? 'Faixa de incerteza (95%): ' + fullVal(r[0]) + ' a ' + fullVal(r[1]) : '';
-  };
+  // total do recorte em cima de cada pilha
+  cMonthly.$stackTotals = true; cMonthly.$err = null;
+  cMonthly.options.scales.y.suggestedMax = undefined;
   legend($('lgMonthly'), series.map(sr => [sr.label, sr.color]));
   const how = { cover: 'cobertura do solo (cores MapBiomas)', n0: 'vegetação nativa × agropecuária',
     n4: 'classe detalhada (cores MapBiomas)', biome: 'bioma', year: 'ano (do mais claro, 2019, ao mais escuro)',
@@ -1665,8 +1610,7 @@ function renderMonthly(R) {
     uf: 'UF (tons por região: Norte verde, Nordeste laranja, Centro-Oeste rosa, Sudeste azul, Sul roxo)' }[S.group];
   $('sMonthly').textContent = measureName() + ' (' + measureUnit() + '), empilhado por ' + how
     + (S.measure === 'int' ? ' · cada parte = sua emissão ÷ área queimada total do ' + grainWord() : '')
-    + ' · número em cima: total do recorte' + (showUnc ? ' · traço: faixa de incerteza (95%)'
-      : (ms === 'emiss' || ms === 'dens') ? ' · faixa de incerteza aparece com até 36 barras' : '')
+    + ' · número em cima: total do recorte'
     + (TB.some(t => t.part) ? ' · * ano incompleto no período' : '');
   cMonthly.options.plugins.tooltip.callbacks.title = items => TB[items[0].dataIndex].long;
   cMonthly.options.plugins.tooltip.callbacks.footer = items => {
@@ -1750,11 +1694,6 @@ function renderKPIs(R) {
   const [ev, eu] = fmtT(R.E);
   setValue($('kEmiss'), ev, eu + (S.gas === 'co2' ? ' CO₂' : ' CO₂e'));
   $('kEmissNote').textContent = sliceText();
-  const u = $('kEmissUnc'); u.textContent = '';
-  if (R.E > 0) {
-    const b = document.createElement('b'); b.textContent = fmtT(R.Elo).join(' ') + ' a ' + fmtT(R.Ehi).join(' ');
-    u.append(document.createTextNode('faixa de incerteza (95%): '), b);
-  }
   const gt = R.gas[0] + R.gas[1] + R.gas[2], gp = v => gt > 0 ? nf(v / gt * 100 < 10 ? 1 : 0).format(v / gt * 100) + '%' : '—';
   const gl = $('kEmissGas'); gl.textContent = '';
   if (gt > 0) {
@@ -1838,14 +1777,14 @@ function renderExternal(R) {
   for (let i = 0; i < N; i++) {
     const y = MONTHS[F.m[i]].slice(0, 4), c = F.c[i];
     let v, lo, hi;
-    if (gi) { const j = { co2: 0, ch4: 1, n2o: 2 }[gi]; v = F[gi][i] / gw; lo = v * ULO[c][j]; hi = v * UHI[c][j]; }
+    if (gi) { v = lo = hi = F[gi][i] / gw; }
     else if (extVar === 'AREA') { v = lo = hi = F.a[i]; }
     else continue;
     add(all, y, v, lo, hi); if (IS_NAT[c]) add(nat, y, v, lo, hi);
   }
   if (extVar === 'MS') Object.entries(DATA.dm_year).forEach(([y, v]) => { all.v[y] = v; });
   const isA = extVar === 'AREA', fmtX = v => (isA ? fmtHa(v) : fmtT(v)).join(' ');
-  const errOf = o => gi ? years.map(y => o.v[y] ? [o.lo[y], o.hi[y]] : null) : null;
+  const errOf = () => null;
   const pal = { 'GFED5.1': '--x1', 'SEEG 14': '--x2', 'CAMS GFAS': '--s7' };
   const ds = [{ label: 'Monitor · todas as classes', data: years.map(y => all.v[y] ?? null), err: errOf(all), mon: 'todas', ...barStyle(css('--accent')) }];
   if (needNat) ds.push({ label: 'Monitor · só vegetação nativa', data: years.map(y => nat.v[y] ?? null), err: errOf(nat), mon: 'nativa', ...barStyle(css('--nat')) });
@@ -1871,7 +1810,7 @@ function renderExternal(R) {
   legend($('lgExt'), ds.map(d => [d.label, d.backgroundColor]));
   $('sExt').textContent = (isA ? 'Σ área queimada por ano no Brasil (ha)' : extVar === 'MS' ? 'Σ matéria seca queimada por ano no Brasil (t)'
     : 'Σ emissão de ' + VN[extVar] + ' por ano no Brasil, em toneladas do próprio gás (sem GWP)')
-    + (gi ? ' · traço: faixa de incerteza do monitor (95%)' : '') + ' · compare cada base com o monitor de mesmo escopo · os filtros do painel não se aplicam';
+    + ' · compare cada base com o monitor de mesmo escopo · os filtros do painel não se aplicam';
   const notes = srcs.map(sn => { const t = (X.notes || {})[sn] || ''; return t.startsWith(sn) ? t : sn + ': ' + t; });
   if (extVar === 'MS') notes.push('Matéria seca compara a quantidade queimada sem depender dos fatores de emissão.');
   if (srcs.includes('SEEG 14') && extVar === 'CO2') notes.push('No CO₂ o SEEG usa outra conta (mortalidade tardia da floresta, sem CO₂ no campo); CH₄ e N₂O são a comparação mais direta.');
@@ -2144,14 +2083,6 @@ function buildMethod() {
   tableFrom('mEf', ['Categoria', 'CO₂', 'CH₄', 'N₂O', 'CO₂e por kg MS (g)'], CATS.map(cat => [cat,
     fmtN(MT.ef.CO2[cat], 0), fmtN(MT.ef.CH4[cat], 1), fmtN(MT.ef.N2O[cat], 2),
     fmtN(MT.ef.CO2[cat] + MT.ef.CH4[cat] * MT.gwp.CH4 + MT.ef.N2O[cat] * MT.gwp.N2O, 0)]));
-  tableFrom('mUnc', ['Componente', 'Desvio relativo', 'Referência'], DATA.unc.rows);
-  (function () {
-    let e = 0, lo = 0, hi = 0;
-    for (let i = 0; i < N; i++) { const c = F.c[i], v = [F.co2[i], F.ch4[i], F.n2o[i]];
-      v.forEach((x, j) => { e += x; lo += x * ULO[c][j]; hi += x * UHI[c][j]; }); }
-    $('mUncTot').textContent = 'Para toda a série (' + mLong(MONTHS[0]) + ' a ' + mLong(LAST) + '), a estimativa central é de '
-      + fmtT(e).join(' ') + ' CO₂e, com faixa de 95% entre ' + fmtT(lo).join(' ') + ' e ' + fmtT(hi).join(' ') + '.';
-  })();
   $('mLastCov').textContent = 'Para meses posteriores a ' + MT.last_cov_year + ', utiliza-se a cobertura de ' + MT.last_cov_year + ', a mais recente disponível.';
   buildCalc();
 }
@@ -2212,6 +2143,7 @@ window.addEventListener('hashchange', route);
 function renderAll() {
   const R = aggregate();
   renderSlice();
+  $('tabDestaques').href = 'destaques.html?m=' + MONTHS[monthRange()[1]];
   renderKPIs(R); renderMonthly(R); renderRank(R);
   renderExternal(R); MX.forEach(renderMx); renderTable(R);
 }
@@ -2240,6 +2172,8 @@ def main():
                     help="área do território por Bioma × UF (area_territorio_bioma_uf.py)")
     ap.add_argument("--external", type=Path, default=EXTERNAL_DEFAULT,
                     help="CSV de comparação externa (comparacao_externa.py); opcional")
+    ap.add_argument("--geo", type=Path, default=DEFAULTS["geo"],
+                    help="contornos de biomas e UFs (geometrias.py) para a página de destaques; opcional")
     args = ap.parse_args()
 
     df, from_monthly = load_all(args.data, args.csv)
@@ -2256,6 +2190,13 @@ def main():
     for key, svg in method_svgs().items():
         html = html.replace(key, svg)
     args.html.write_text(html, encoding="utf-8")
+
+    if (args.geo / "biomas.geojson").exists():
+        dq = args.html.parent / "destaques.html"
+        n = _dq.write(payload, args.geo, dq, pd.Timestamp.now().strftime("%d/%m/%Y"), args.html.name)
+        print(f"Destaques HTML:  {dq} ({n // 1024} KB)")
+    else:
+        print(f"Sem contornos em {args.geo}: página de destaques não gerada (rode geometrias.py)")
 
     print(f"CSV consolidado: {args.csv} ({len(df)} linhas)")
     print(f"Dashboard HTML:  {args.html} ({len(html) // 1024} KB)")
