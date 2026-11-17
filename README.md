@@ -12,6 +12,11 @@ Este é o repositório principal do monitor de emissões. Os scripts usados no E
 
 O consolidado contém 32.768 linhas, 94 meses (2019-01 a 2026-10) e 27 UFs. No total do período: 134,5 Mha queimados e 3,65 Gt CO₂e (CO₂ 3,37 Gt; CH₄ 176 Mt CO₂e; N₂O 108 Mt CO₂e). Cada linha representa a agregação mensal por bioma, UF e classe. No Looker Studio, conecte o CSV acima e use `Ano`, `mes`, `Bioma`, `SIGLA_UF` e as classes como dimensões; `Área km²`, `Emissão CO2 (t)`, `Emissão CH4 (t CO2e)`, `Emissão N2O (t CO2e)` e `Emissão CO2e total (t)` são métricas somáveis.
 
+## Comparação externa e incerteza
+
+- [`src/comparacao_externa.py`](src/comparacao_externa.py): soma o GFED5.1 (Zenodo) e o CAMS GFAS (API do ADS, requer chave) no Brasil, com máscara dos limites do IBGE, e grava [`data/externo/comparacao_anual.csv`](data/externo/comparacao_anual.csv) (área queimada em ha; CO₂, CH₄, N₂O e matéria seca em t). O dashboard mostra a comparação quando esse arquivo existe.
+- A faixa de incerteza (95%) combina os desvios relativos de área queimada, estoque de carbono, fator de combustão, fração de carbono e fatores de emissão; os parâmetros estão em `src/build_dashboard.py` (`UNC_*`) e na seção 10 da página de método.
+
 ## Reconstruir o dashboard
 
 ```bash

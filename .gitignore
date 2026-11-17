@@ -3,3 +3,4 @@ __pycache__/
 data/monthly/*.csv
 venv/
 .venv/
+data/externo/cache/
