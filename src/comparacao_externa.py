@@ -10,6 +10,7 @@ Etapas (cada uma pode ser rodada sozinha):
   python comparacao_externa.py gfed               # baixa GFED5.1 mensal (Zenodo, 1,7 GB) e soma 2019-2022
   python comparacao_externa.py gfed --nrt-dir D   # + anos NRT (2023+) baixados à parte via SFTP do GFED
   python comparacao_externa.py gfas               # CAMS GFAS via API do ADS (requer ~/.cdsapirc)
+  python comparacao_externa.py seeg               # SEEG 14, fogo em vegetação nativa (CSVs do Drive, workspace2)
 
 Requer: numpy, pandas, netCDF4 (pip install netCDF4); earthengine-api para a máscara; cdsapi para GFAS.
 """
@@ -230,12 +231,53 @@ def cell_area_m2(lat, res):
     return (r ** 2) * rad(res) * (np.sin(rad(lat + res / 2)) - np.sin(rad(lat - res / 2)))
 
 
+# ---------------------------------------------------------------- SEEG 14 (fogo em vegetação nativa)
+SEEG_FOLDER = "1xRnvyz40d74JvRGhpXsWzrtlZ1V5WhSG"  # Drive: SEEG14_YEARLY-2 (seeg14_emissions_AAAA.csv)
+SEEG_SCOPE = ("SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); "
+              "CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)")
+
+
+def run_seeg(args):
+    """Soma por ano os CSVs do SEEG 14 (município × bioma × área protegida) baixados do Drive."""
+    import requests
+    ccal = HERE.parents[1] if HERE.name != "src" else HERE.parent
+    sys.path.insert(0, str(ccal))
+    from BETA_PYTHON import auth
+    from google.auth.transport.requests import Request
+    cred = auth.load("workspace2"); cred.refresh(Request())
+    hdr = {"Authorization": f"Bearer {cred.token}"}
+    r = requests.get("https://www.googleapis.com/drive/v3/files", headers=hdr, timeout=60, params={
+        "q": f"'{args.folder}' in parents and trashed=false", "fields": "files(id,name)", "pageSize": 500})
+    r.raise_for_status()
+    ids = {f["name"]: f["id"] for f in r.json()["files"]}
+    cache = CACHE / "seeg14"; cache.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for y in YEARS:
+        name = f"seeg14_emissions_{y}.csv"
+        if name not in ids:
+            continue
+        f = cache / name
+        if not f.exists():
+            f.write_bytes(requests.get(f"https://www.googleapis.com/drive/v3/files/{ids[name]}", params={"alt": "media"},
+                                       headers=hdr, timeout=300).content)
+        t = pd.read_csv(f).sum(numeric_only=True)
+        for var, cols in {"CO2": ["CO2_floresta_Mg", "CO2_savana_Mg"],
+                          "CH4": ["CH4_campo_Mg", "CH4_floresta_Mg", "CH4_savana_Mg"],
+                          "N2O": ["N2O_campo_Mg", "N2O_floresta_Mg", "N2O_savana_Mg"]}.items():
+            rows.append(["SEEG 14", y, var, float(sum(t[c] for c in cols)), SEEG_SCOPE, "nativa"])  # Mg = t
+        print("SEEG", y, "ok")
+    write_rows("SEEG 14", rows)
+
+
 # ---------------------------------------------------------------- saída
 def write_rows(source, rows):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    new = pd.DataFrame(rows, columns=["fonte", "ano", "variavel", "valor_t", "escopo"])
+    rows = [r if len(r) == 6 else r + ["todas"] for r in rows]  # escopo do monitor comparável: todas | nativa
+    new = pd.DataFrame(rows, columns=["fonte", "ano", "variavel", "valor_t", "escopo", "escopo_monitor"])
     if OUT_CSV.exists():
         old = pd.read_csv(OUT_CSV)
+        if "escopo_monitor" not in old.columns:
+            old["escopo_monitor"] = "todas"
         new = pd.concat([old[old["fonte"] != source], new], ignore_index=True)
     new.sort_values(["fonte", "variavel", "ano"]).to_csv(OUT_CSV, index=False, encoding="utf-8")
     print(f"{OUT_CSV}: {len(new)} linhas")
@@ -248,11 +290,14 @@ def main():
     g = sub.add_parser("gfed"); g.add_argument("--zip"); g.add_argument("--nrt-dir")
     g.add_argument("--sem-area", action="store_true", help="não baixa o arquivo de ecossistemas (área queimada)")
     sub.add_parser("gfas")
+    sg = sub.add_parser("seeg"); sg.add_argument("--folder", default=SEEG_FOLDER, help="id da pasta do Drive com seeg14_emissions_AAAA.csv")
     args = ap.parse_args()
     if args.cmd == "mascara":
         build_mask(0.25); build_mask(0.1)
     elif args.cmd == "gfed":
         run_gfed(args)
+    elif args.cmd == "seeg":
+        run_seeg(args)
     else:
         run_gfas(args)
 

@@ -14,7 +14,7 @@ O consolidado contém 32.768 linhas, 94 meses (2019-01 a 2026-10) e 27 UFs. No t
 
 ## Comparação externa e incerteza
 
-- [`src/comparacao_externa.py`](src/comparacao_externa.py): soma o GFED5.1 (Zenodo) e o CAMS GFAS (API do ADS, requer chave) no Brasil, com máscara dos limites do IBGE, e grava [`data/externo/comparacao_anual.csv`](data/externo/comparacao_anual.csv) (área queimada em ha; CO₂, CH₄, N₂O e matéria seca em t). O dashboard mostra a comparação quando esse arquivo existe.
+- [`src/comparacao_externa.py`](src/comparacao_externa.py): soma o GFED5.1 (Zenodo), o SEEG 14 (fogo em vegetação nativa, CSVs do Drive) e o CAMS GFAS (API do ADS, requer chave) no Brasil, com máscara dos limites do IBGE, e grava [`data/externo/comparacao_anual.csv`](data/externo/comparacao_anual.csv) (área queimada em ha; CO₂, CH₄, N₂O e matéria seca em t). O dashboard mostra a comparação quando esse arquivo existe.
 - A faixa de incerteza (95%) combina os desvios relativos de área queimada, estoque de carbono, fator de combustão, fração de carbono e fatores de emissão; os parâmetros estão em `src/build_dashboard.py` (`UNC_*`) e na seção 10 da página de método.
 
 ## Reconstruir o dashboard

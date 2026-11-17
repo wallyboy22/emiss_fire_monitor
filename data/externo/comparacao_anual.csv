@@ -1,21 +1,42 @@
-fonte,ano,variavel,valor_t,escopo
-GFED5.1,2019,AREA,31376634.621337086,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2020,AREA,33241237.88901576,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2021,AREA,28722724.21051671,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2022,AREA,28040245.700984728,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2019,CH4,1967704.652478939,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2020,CH4,2360106.273739408,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2021,CH4,1768556.0091085443,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2022,CH4,2398097.614218315,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2019,CO2,911904247.215905,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2020,CO2,1074451699.631411,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2021,CO2,848571388.7569023,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2022,CO2,1090240144.6541061,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2019,MS,563660098.6879753,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2020,MS,664126628.8344295,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2021,MS,523681418.4074905,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2022,MS,672620629.9426898,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2019,N2O,103131.55894020831,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2020,N2O,121776.0176509726,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2021,N2O,95122.41003079835,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
-GFED5.1,2022,N2O,126069.99932375684,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°"
+fonte,ano,variavel,valor_t,escopo,escopo_monitor
+GFED5.1,2019,AREA,31376634.62133709,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2020,AREA,33241237.88901576,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2021,AREA,28722724.21051671,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2022,AREA,28040245.700984728,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2019,CH4,1967704.652478939,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2020,CH4,2360106.273739408,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2021,CH4,1768556.0091085443,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2022,CH4,2398097.614218315,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2019,CO2,911904247.215905,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2020,CO2,1074451699.631411,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2021,CO2,848571388.7569023,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2022,CO2,1090240144.654106,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2019,MS,563660098.6879753,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2020,MS,664126628.8344295,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2021,MS,523681418.4074905,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2022,MS,672620629.9426898,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2019,N2O,103131.55894020831,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2020,N2O,121776.0176509726,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2021,N2O,95122.41003079836,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+GFED5.1,2022,N2O,126069.99932375684,"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°",todas
+SEEG 14,2019,CH4,448308.51411709096,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2020,CH4,504399.5525672422,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2021,CH4,315879.2691168041,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2022,CH4,364904.0668072342,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2023,CH4,329681.44287705893,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2024,CH4,1075448.1692317564,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2025,CH4,320408.0494738944,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2019,CO2,97094816.01989466,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2020,CO2,106031476.21540603,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2021,CO2,80930639.80265708,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2022,CO2,94944827.00388972,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2023,CO2,88214492.37144193,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2024,CO2,201742721.31281826,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2025,CO2,88121134.31474906,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2019,N2O,31042.2502727042,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2020,N2O,33688.556187436305,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2021,N2O,24223.425459910963,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2022,N2O,24404.915163179525,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2023,N2O,22602.491163627776,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2024,N2O,54556.8028550982,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa
+SEEG 14,2025,N2O,21573.03189903495,"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)",nativa

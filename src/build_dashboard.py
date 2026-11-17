@@ -246,7 +246,10 @@ def external_payload(path):
     if "escopo" in ext.columns:
         for f, g in ext.groupby("fonte"):
             notes[str(f)] = str(g["escopo"].dropna().iloc[0]) if g["escopo"].notna().any() else ""
-    return {"rows": rows, "notes": notes}
+    scope = {}
+    if "escopo_monitor" in ext.columns:
+        scope = {str(f): str(g["escopo_monitor"].iloc[0]) for f, g in ext.groupby("fonte")}
+    return {"rows": rows, "notes": notes, "scope": scope}
 
 
 def monitor_dry_matter(df):
@@ -678,26 +681,20 @@ header .meta { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
 .grid { display: grid; gap: 16px; }
 .kpis { grid-template-columns: 1fr 1.5fr 1fr 1fr 1fr; margin-bottom: 16px; }
 .unc { font-size: 12px; color: var(--muted); margin-top: 4px; }
-.sch3 { font-size: 13px; margin: 14px 0 6px; color: var(--ink); }
-.anom { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12.5px; color: var(--ink-2); }
-.anom i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; box-shadow: inset 0 0 0 1px var(--seam); }
-.anom b { color: var(--ink); font-weight: 650; }
-table.sctab td.rd-up { color: var(--up); font-weight: 650; }
-table.sctab td.rd-down { color: var(--down); font-weight: 650; }
-.scctl { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 8px 0 6px; }
-.scctl > div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-table.sctab td { color: var(--ink); }
-table.sctab tbody tr { cursor: pointer; }
-table.sctab tbody tr:hover td, table.sctab tbody tr:hover th { background: var(--accent-weak); }
-table.sctab tbody tr.dim th, table.sctab tbody tr.dim td { opacity: .45; }
-table.sctab tbody tr.on th { text-decoration: underline; text-underline-offset: 3px; }
-table.sctab th i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: -1px;
-  box-shadow: inset 0 0 0 1px var(--seam); }
-table.sctab .kbar { display: inline-block; height: 8px; border-radius: 2px; background: var(--accent); vertical-align: 0; margin-right: 6px; }
 .mhint { margin: 2px 0 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
 .mhint b.fx { display: block; color: var(--ink); font-weight: 650; font-size: 12.5px; margin: 2px 0 2px;
   font-variant-numeric: tabular-nums; }
 .tile .label abbr { text-decoration: none; }
+.kpick { margin: 0 0 6px; font-size: 12px; color: var(--muted); }
+.tile.sel { cursor: pointer; transition: border-color .12s; }
+.tile.sel:hover { border-color: var(--axis); }
+.tile.sel:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tile.sel.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tile .pick { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+.tile.sel:hover .pick { color: var(--ink-2); }
+.tile.on .pick { color: var(--accent); font-weight: 650; }
+.scope-tag { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 500; color: var(--muted); vertical-align: 2px;
+  padding: 1px 8px; border: 1px dashed var(--axis); border-radius: 999px; white-space: nowrap; letter-spacing: 0; }
 .unc b { color: var(--ink-2); font-weight: 600; }
 .gasbars { display: grid; gap: 8px; margin: 6px 0 12px; }
 .gasbar { display: grid; grid-template-columns: 62px 1fr; gap: 10px; align-items: center; font-size: 12.5px; color: var(--ink-2); }
@@ -897,8 +894,6 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
   <aside class="filters" id="filters" aria-label="Filtros">
     <div class="fhead"><div class="slice" id="slice" aria-live="polite"></div></div>
     <div class="fbody" id="fBody">
-      <div class="fgroup"><span class="flabel" id="lMeasure">Medida</span><div class="seg" id="fMeasure" role="group" aria-labelledby="lMeasure"></div>
-        <p class="mhint" id="fMeasureHint" aria-live="polite"></p></div>
       <div class="fgroup"><span class="flabel" id="lGas">Gás</span><div class="seg" id="fGas" role="group" aria-labelledby="lGas"></div></div>
       <div class="fgroup"><span class="flabel" id="lPeriod">Período</span><div class="seg" id="fPeriod" role="group" aria-labelledby="lPeriod"></div></div>
       <div class="fgroup"><span class="flabel" id="lBiome">Bioma</span><div class="seg" id="fBiome" role="group" aria-labelledby="lBiome"></div></div>
@@ -910,11 +905,12 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
   </aside>
   <main class="content">
 
-  <section class="grid kpis" aria-label="Indicadores">
-    <div class="card tile"><div class="label">Área queimada</div><div class="value" id="kArea"></div><div class="note" id="kAreaNote"></div></div>
-    <div class="card tile hero"><div class="label" id="kEmissLabel">Emissão</div><div class="value" id="kEmiss"></div><div class="note" id="kEmissNote"></div><div class="unc" id="kEmissUnc"></div></div>
-    <div class="card tile"><div class="label" id="kIntLabel">Emissão por hectare queimado</div><div class="value" id="kInt"></div><div class="note" id="kIntNote"></div></div>
-    <div class="card tile"><div class="label" id="kDensLabel">Emissão por hectare de território</div><div class="value" id="kDens"></div><div class="note" id="kDensNote"></div></div>
+  <p class="kpick" id="kPickNote">Clique num indicador para vê-lo nos gráficos</p>
+  <section class="grid kpis" role="radiogroup" aria-label="Medida mostrada nos gráficos">
+    <div class="card tile sel" id="tArea" data-m="area"><div class="label">Área queimada</div><div class="value" id="kArea"></div><div class="note" id="kAreaNote"></div><div class="pick"></div></div>
+    <div class="card tile hero sel" id="tEmiss" data-m="emiss"><div class="label" id="kEmissLabel">Emissão</div><div class="value" id="kEmiss"></div><div class="note" id="kEmissNote"></div><div class="unc" id="kEmissUnc"></div><div class="pick"></div></div>
+    <div class="card tile sel" id="tInt" data-m="int"><div class="label" id="kIntLabel">Emissão por hectare queimado</div><div class="value" id="kInt"></div><div class="note" id="kIntNote"></div><div class="pick"></div></div>
+    <div class="card tile sel" id="tDens" data-m="dens"><div class="label" id="kDensLabel">Emissão por hectare de território</div><div class="value" id="kDens"></div><div class="note" id="kDensNote"></div><div class="pick"></div></div>
     <div class="card tile"><div class="label" id="kLastLabel">Último mês</div><div class="value" id="kLast"></div><div class="note" id="kLastNote"></div></div>
   </section>
 
@@ -943,7 +939,7 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
 
   <section class="grid row3">
     <div class="card">
-      <h2>Total anual</h2>
+      <h2>Total anual <span class="scope-tag" title="Mostra todos os anos; o filtro de período não se aplica">todos os anos</span></h2>
       <p class="sub" id="sAnnual"></p>
       <div class="chart"><canvas id="cAnnual" role="img" aria-label="Totais anuais"></canvas></div>
     </div>
@@ -961,22 +957,6 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
   </section>
 
   <section class="card" style="margin-bottom:16px">
-    <div class="card-head">
-      <div><h2 id="tScatter">Área queimada × emissão</h2><p class="sub" id="sScatter"></p></div>
-    </div>
-    <div class="scctl">
-      <div><span class="flabel" id="lScG">Agrupar por</span><div class="seg small" id="fScG" role="group" aria-labelledby="lScG"></div></div>
-      <div><span class="flabel" id="lScP">Cada ponto</span><div class="seg small" id="fScP" role="group" aria-labelledby="lScP"></div></div>
-      <div><span class="flabel" id="lScY">Eixo vertical</span><div class="seg small" id="fScY" role="group" aria-labelledby="lScY"></div></div>
-    </div>
-    <div class="chart tall"><canvas id="cScatter" role="img" aria-label="Dispersão entre área queimada e emissão"></canvas></div>
-    <p class="matrix-note" id="scHint"></p>
-    <h3 class="sch3">Maiores anomalias</h3>
-    <ul class="anom" id="scAnom"></ul>
-    <div class="matrix-wrap" style="margin-top:10px"><table class="matrix sctab" id="scTab"></table></div>
-  </section>
-
-  <section class="card" style="margin-bottom:16px">
     <h2>Emissão por hectare queimado: bioma × mês do ano</h2>
     <p class="sub" id="sSeason"></p>
     <div class="matrix-wrap"><table class="matrix" id="mxSeason"></table></div>
@@ -984,7 +964,7 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
   </section>
 
   <section class="card" style="margin-bottom:16px" id="extCard" hidden>
-    <h2>Comparação com outras bases</h2>
+    <h2>Comparação com outras bases <span class="scope-tag" title="Compara o Brasil inteiro; nenhum filtro do painel se aplica">Brasil · sem filtros</span></h2>
     <p class="sub" id="sExt"></p>
     <div class="seg small" id="fExt" role="group" aria-label="Variável comparada" style="margin:6px 0 8px"></div>
     <ul class="legend" id="lgExt"></ul>
@@ -993,22 +973,22 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
   </section>
 
   <section class="card" style="margin-bottom:16px">
-    <h2>Mês × ano</h2>
+    <h2>Mês × ano <span class="scope-tag" title="Colunas são os anos; o filtro de período não se aplica">anos inteiros · ignora o período</span></h2>
     <p class="sub" id="sMxMonth"></p>
     <div class="matrix-wrap"><table class="matrix" id="mxMonth"></table></div>
   </section>
   <section class="card" style="margin-bottom:16px">
-    <h2 id="tMxUF">UF × ano</h2>
+    <h2><span id="tMxUF">UF × ano</span> <span class="scope-tag" title="Mostra todas as UFs (a selecionada fica sublinhada) e todos os anos">todas as UFs · ignora o período</span></h2>
     <p class="sub" id="sMxUF"></p>
     <div class="matrix-wrap"><table class="matrix" id="mxUF"></table></div>
   </section>
   <section class="card" style="margin-bottom:16px">
-    <h2 id="tMxBiome">Bioma × ano</h2>
+    <h2><span id="tMxBiome">Bioma × ano</span> <span class="scope-tag" title="Mostra todos os biomas e todos os anos">todos os biomas · ignora o período</span></h2>
     <p class="sub" id="sMxBiome"></p>
     <div class="matrix-wrap"><table class="matrix" id="mxBiome"></table></div>
   </section>
   <section class="card" style="margin-bottom:16px">
-    <h2 id="tMxCover">Cobertura × ano</h2>
+    <h2><span id="tMxCover">Cobertura × ano</span> <span class="scope-tag" title="Colunas são os anos; o filtro de período não se aplica">anos inteiros · ignora o período</span></h2>
     <p class="sub" id="sMxCover"></p>
     <div class="matrix-wrap"><table class="matrix" id="mxCover"></table></div>
     <p class="matrix-note" id="mxNote"></p>
@@ -1317,14 +1297,23 @@ const MEASURE_HINT = {
   int: ['Σ emissão do gás (t) ÷ Σ área queimada (ha)', 'Quanto cada hectare que pegou fogo emitiu, em média. Mede a intensidade da queima: depende do tipo de vegetação, não de quanto queimou.'],
   dens: ['Σ emissão do gás (t) ÷ Σ área do território (ha)', 'Emissão por hectare do território inteiro do recorte (estado, bioma ou os dois), queimado ou não. Mede o peso do fogo na região e compara regiões de tamanhos diferentes.'],
 };
-function paintMeasureHint() {
-  const h = $('fMeasureHint'), [f, t] = MEASURE_HINT[S.measure]; h.textContent = '';
-  const b = document.createElement('b'); b.className = 'fx'; b.textContent = f; h.append(b, document.createTextNode(t));
+const MEASURE_TILES = { area: 'tArea', emiss: 'tEmiss', int: 'tInt', dens: 'tDens' };
+function paintTiles() {
+  Object.entries(MEASURE_TILES).forEach(([v, id]) => {
+    const t = $(id), on = S.measure === v;
+    t.setAttribute('aria-checked', String(on)); t.classList.toggle('on', on);
+    const pk = t.querySelector ? t.querySelector('.pick') : null;
+    if (pk) pk.textContent = on ? '● nos gráficos' : 'ver nos gráficos';
+  });
 }
-seg('fMeasure', 'measure', [['area', 'Área queimada', 'Σ área queimada (ha)'], ['emiss', 'Emissão', 'Σ emissão do gás (t)'],
-  ['int', 'Por ha queimado', 'Σ emissão (t) ÷ Σ área queimada (ha)'], ['dens', 'Por ha de território', 'Σ emissão (t) ÷ Σ área do território (ha)']],
-  () => { paintMeasureHint(); renderAll(); });
-paintMeasureHint();
+function setMeasure(v) { if (S.measure === v) return; S.measure = v; paintTiles(); renderAll(); }
+Object.entries(MEASURE_TILES).forEach(([v, id]) => {
+  const t = $(id); t.setAttribute('role', 'radio'); t.tabIndex = 0;
+  t.title = MEASURE_HINT[v][0] + ' — ' + MEASURE_HINT[v][1];
+  t.addEventListener('click', () => setMeasure(v));
+  t.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setMeasure(v); } });
+});
+paintTiles();
 seg('fGroup', 'group', [['cover', 'Cobertura'], ['n0', 'Nativa × agro', 'Vegetação nativa × agropecuária'],
   ['n4', 'Classe', 'Classe detalhada (MapBiomas)'], ['biome', 'Bioma'], ['uf', 'UF']]);
 (function () {
@@ -1813,235 +1802,6 @@ function renderMonthMatrix(R) {
   $('sMxMonth').textContent = measureName() + ' (' + matrixUnit() + ') · ' + sliceText().replace(/ · [^·]+ a [^·]+$/, '')
     + ' · sazonalidade: cada coluna é um ano · ignora o filtro de período';
 }
-let cScatter = null;
-const logTick = v => { const l = Math.log10(v); return Math.abs(l - Math.round(l)) < 1e-6 ? axisTick(v) : ''; };
-const SC = { g: 'uf', p: 'year', y: 'e', hi: null };
-function withAlpha(c, a) {
-  const cx = withAlpha.cx || (withAlpha.cx = document.createElement('canvas').getContext('2d'));
-  cx.fillStyle = '#000'; cx.fillStyle = c; const h = cx.fillStyle;
-  if (h[0] === '#') { const n = parseInt(h.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; }
-  return h.replace(/rgba?\(([^)]+)\)/, (m, x) => 'rgba(' + x.split(',').slice(0, 3).join(',') + ',' + a + ')');
-}
-function scSeg(id, key, items) {
-  const box = $(id); box.textContent = '';
-  items.forEach(([v, t, title]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; if (title) b.title = title;
-    b.setAttribute('aria-pressed', String(SC[key] === v));
-    b.addEventListener('click', () => { if (SC[key] === v) return; SC[key] = v; SC.hi = null; renderScatter(); }); box.appendChild(b); });
-}
-// pontos: entidade (UF, bioma ou cobertura) × período (ano ou mês); respeita bioma, UF, cobertura, período e gás
-// dimensões da dispersão: chave por linha de fato, quantidade, rótulo, cor e nome
-const SC_DIMS = {
-  uf: { n: () => NU, key: (i, m) => F.u[i], label: k => DATA.ufs[k].sigla, full: k => DATA.ufs[k].nome, color: k => UF_COLOR[k],
-        name: 'UF', art: 'uma' },
-  biome: { n: () => NB, key: (i, m) => F.b[i], label: k => BIOMES[k], color: k => biomeColor(k), name: 'bioma', art: 'um' },
-  cover: { n: () => NC, key: (i, m) => CLASS_COVER[F.c[i]], label: k => COVER[k][0], color: k => coverColor(k),
-           name: 'classe de cobertura', art: 'uma' },
-  year: { n: () => NY, key: (i, m) => YEAR_OF[m], label: k => YEARS[k] + (YEARS[k] === LAST.slice(0, 4) && LAST_YEAR_PARTIAL ? '*' : ''),
-          color: k => rampAt(rampColors(), 0.25 + 0.75 * k / Math.max(1, NY - 1)).color, name: 'ano', art: 'um' },
-  mon: { n: () => 12, key: (i, m) => +MONTHS[m].slice(5) - 1, label: k => MON[k], full: k => MON[k],
-         color: k => 'hsl(' + ((k * 30 + 200) % 360) + ' 55% 45%)', name: 'mês do ano', art: 'um' },
-  ym: { n: () => NM, key: (i, m) => m, label: k => mLabel(MONTHS[k]), color: () => css('--accent'), name: 'mês', art: 'um' },
-};
-// para cada agrupamento, o que pode ser ponto
-const SC_POINTS = {
-  uf: [['year', 'Ano'], ['ym', 'Mês']], biome: [['year', 'Ano'], ['ym', 'Mês']], cover: [['year', 'Ano'], ['ym', 'Mês']],
-  year: [['uf', 'UF'], ['biome', 'Bioma'], ['cover', 'Cobertura'], ['ym', 'Mês']],
-  mon: [['uf', 'UF'], ['biome', 'Bioma'], ['cover', 'Cobertura'], ['year', 'Ano']],
-};
-// pontos: entidade × ponto; respeita bioma, UF, cobertura, período e gás
-function scatterData() {
-  const [m0, m1] = monthRange();
-  const bSel = S.biome === 'all' ? -1 : +S.biome, uSel = S.uf === 'all' ? -1 : +S.uf, g = S.gas;
-  const G = SC_DIMS[SC.g], P = SC_DIMS[SC.p];
-  const nE = G.n(), nP = P.n();
-  const A = new Float64Array(nE * nP), E = new Float64Array(nE * nP);
-  for (let i = 0; i < N; i++) {
-    const m = F.m[i]; if (m < m0 || m > m1) continue;
-    const b = F.b[i], u = F.u[i];
-    if (bSel >= 0 && b !== bSel) continue;
-    if (SC.g !== 'uf' && uSel >= 0 && u !== uSel) continue;
-    if (!coverPass(F.c[i])) continue;
-    const k = G.key(i, m), t = P.key(i, m);
-    const e = g === 'total' ? F.co2[i] + F.ch4[i] + F.n2o[i] : F[g][i];
-    A[k * nP + t] += F.a[i]; E[k * nP + t] += e;
-  }
-  const ents = [];
-  for (let k = 0; k < nE; k++) {
-    const name = G.label(k), full = G.full ? G.full(k) : name, color = G.color(k);
-    const pts = [];
-    for (let t = 0; t < nP; t++) { const a = A[k * nP + t], e = E[k * nP + t];
-      if (a > 0 && e > 0) pts.push({ x: a, y: e, k, per: P.label(t) }); }
-    if (!pts.length) continue;
-    let sa = 0, se = 0; pts.forEach(q => { sa += q.x; se += q.y; });
-    const kk = se / sa;
-    // R² em log em torno da reta da própria entidade (y = k·x)
-    const ly = pts.map(q => Math.log(q.y)), my = ly.reduce((s, v) => s + v, 0) / ly.length;
-    let ss = 0, st = 0; pts.forEach((q, i) => { ss += (ly[i] - Math.log(kk * q.x)) ** 2; st += (ly[i] - my) ** 2; });
-    const ratios = pts.map(q => q.y / q.x);
-    // reta livre em log: ln(emissão) = ln(a) + b·ln(área); b > 1: o fogo escala para vegetação com mais carbono
-    let fit = null;
-    if (pts.length >= 4) {
-      const lx = pts.map(q => Math.log(q.x)), mx = lx.reduce((s, v) => s + v, 0) / lx.length;
-      let sxy = 0, sxx = 0; lx.forEach((v, i) => { sxy += (v - mx) * (ly[i] - my); sxx += (v - mx) ** 2; });
-      if (sxx > 0) {
-        const b = sxy / sxx, la = my - b * mx;
-        let r = 0; lx.forEach((v, i) => { r += (ly[i] - la - b * v) ** 2; });
-        const se_b = pts.length > 2 ? Math.sqrt(r / (pts.length - 2) / sxx) : null;
-        fit = { a: Math.exp(la), b, r2: st > 0 ? 1 - r / st : null, se: se_b };
-      }
-    }
-    pts.forEach(q => { q.dev = q.y / q.x / kk - 1; q.exc = q.y - kk * q.x; });
-    ents.push({ k, name, full, color, pts, sa, se, kk, fit, r2: pts.length > 2 && st > 0 ? 1 - ss / st : null,
-      lo: Math.min(...ratios), hi: Math.max(...ratios), sel: SC.g === 'uf' && k === uSel });
-  }
-  return ents;
-}
-// rótulos dos maiores desvios na dispersão
-const scLabels = {
-  id: 'scLabels',
-  afterDatasetsDraw(ch) {
-    const ctx = ch.ctx; ctx.save();
-    ctx.font = '600 11px ' + getComputedStyle(document.body).fontFamily; ctx.fillStyle = css('--ink'); ctx.textBaseline = 'middle';
-    const boxes = [];  // evita sobreposição: desloca o rótulo para baixo até achar espaço
-    ch.data.datasets.forEach((d, di) => {
-      if (d.isLine) return;
-      ch.getDatasetMeta(di).data.forEach((el, i) => {
-        const q = d.data[i]; if (!q || !q.lab) return;
-        const right = el.x < ch.chartArea.right - 150, w = ctx.measureText(q.lab).width;
-        const x = el.x + (right ? 8 : -8), x0 = right ? x : x - w;
-        let y = el.y;
-        while (boxes.some(bx => x0 < bx[0] + bx[2] && x0 + w > bx[0] && Math.abs(y - bx[1]) < 13)) y += 13;
-        boxes.push([x0, y, w]);
-        if (y !== el.y) { ctx.strokeStyle = css('--muted'); ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(el.x, el.y); ctx.lineTo(x, y); ctx.stroke(); }
-        ctx.textAlign = right ? 'left' : 'right';
-        ctx.strokeStyle = css('--surface'); ctx.lineWidth = 3; ctx.strokeText(q.lab, x, y);
-        ctx.fillText(q.lab, x, y);
-      });
-    });
-    ctx.restore();
-  },
-};
-const readB = f => !f || f.se === null ? '—' : (f.b - 1.96 * f.se > 1 ? 'escala' : f.b + 1.96 * f.se < 1 ? 'dilui' : 'estável');
-function renderScatter() {
-  scSeg('fScG', 'g', [['uf', 'UF'], ['biome', 'Bioma'], ['cover', 'Cobertura'], ['year', 'Ano'], ['mon', 'Mês do ano', 'jan, fev, … somando todos os anos']]);
-  if (!SC_POINTS[SC.g].some(([v]) => v === SC.p)) SC.p = SC_POINTS[SC.g][0][0];
-  scSeg('fScP', 'p', SC_POINTS[SC.g]);
-  scSeg('fScY', 'y', [['e', 'Emissão (t)', 'Σ emissão do gás (t), escala log'], ['i', 'Por ha queimado (t/ha)', 'Σ emissão (t) ÷ Σ área queimada (ha)'],
-    ['d', 'Desvio da média (%)', 'quanto o ponto emitiu por hectare acima ou abaixo da média do seu grupo']]);
-  const ents = scatterData(), gu = GAS[S.gas].unit, Y = SC.y;
-  let SA = 0, SE = 0; ents.forEach(en => { SA += en.sa; SE += en.se; });
-  const KK = SA > 0 ? SE / SA : 0;
-  const allX = ents.flatMap(en => en.pts.map(q => q.x)), X0 = Math.min(...allX), X1 = Math.max(...allX);
-  const dim = en => SC.hi !== null && SC.hi !== en.k;
-  // maiores anomalias: excesso ou falta de emissão (t) em relação à média do próprio grupo
-  const pool = ents.filter(en => SC.hi === null || SC.hi === en.k).flatMap(en => en.pts.map(q => ({ q, en })));
-  pool.sort((x, y) => Math.abs(y.q.exc) - Math.abs(x.q.exc));
-  const top = new Set(pool.slice(0, 5).map(o => o.q));
-  const fmtDev = v => (v >= 0 ? '+' : '') + nf(0).format(v * 100) + '%';
-  const yOf = q => Y === 'e' ? q.y : Y === 'i' ? q.y / q.x : q.dev * 100;
-  const ds = [];
-  ents.forEach(en => {
-    const c = dim(en) ? withAlpha(en.color, 0.15) : en.color;
-    ds.push({ type: 'scatter', label: en.name, ent: en, order: 2,
-      data: en.pts.map(q => ({ ...q, y: yOf(q), e: q.y, lab: top.has(q) ? en.name + ' · ' + q.per + ': ' + fmtDev(q.dev) : '' })),
-      backgroundColor: c, borderColor: dim(en) ? 'transparent' : css('--surface'), borderWidth: 1,
-      pointRadius: en.pts.map(q => top.has(q) ? 6 : en.sel || SC.hi === en.k ? 5.5 : SC.p === 'ym' ? 3 : 4), pointHoverRadius: 7 });
-    if (!en.fit || Y === 'd') return;
-    const x0 = Math.min(...en.pts.map(q => q.x)), x1 = Math.max(...en.pts.map(q => q.x));
-    const line = [];
-    for (let j = 0; j <= 12; j++) { const x = x0 * Math.pow(x1 / x0, j / 12), ye = en.fit.a * Math.pow(x, en.fit.b);
-      line.push({ x, y: Y === 'e' ? ye : ye / x }); }
-    ds.push({ type: 'line', label: en.name + ' (reta)', data: line, ent: en, isLine: true, order: 1, pointRadius: 0, tension: 0,
-      borderColor: dim(en) ? withAlpha(en.color, 0.12) : en.color, borderWidth: SC.hi === en.k ? 3 : 2 });
-  });
-  if (Y === 'd') ds.push({ type: 'line', label: 'média do grupo', data: allX.length ? [{ x: X0, y: 0 }, { x: X1, y: 0 }] : [],
-    borderColor: css('--ink'), borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, order: 0, isLine: true, isAll: true });
-  else ds.push({ type: 'line', label: 'todos', data: allX.length ? [{ x: X0, y: Y === 'e' ? KK * X0 : KK }, { x: X1, y: Y === 'e' ? KK * X1 : KK }] : [],
-    borderColor: css('--ink'), borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, order: 0, isLine: true, isAll: true });
-  if (!cScatter) {
-    cScatter = new Chart($('cScatter'), { type: 'scatter', data: { datasets: [] }, plugins: [scLabels], options: {
-      responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: {} } },
-      onClick: (ev, els) => { const d = els.length ? cScatter.data.datasets[els[0].datasetIndex] : null;
-        SC.hi = d && d.ent ? (SC.hi === d.ent.k ? null : d.ent.k) : null; renderScatter(); },
-      scales: { x: { type: 'logarithmic', title: { display: true, text: '' }, ticks: { callback: logTick, maxRotation: 0, autoSkip: false } },
-                y: { type: 'logarithmic', title: { display: true, text: '' }, ticks: { callback: logTick } } } } });
-  }
-  cScatter.data.datasets = ds;
-  cScatter.options.scales.y.type = Y === 'e' ? 'logarithmic' : 'linear';
-  cScatter.options.scales.y.beginAtZero = Y === 'i';
-  cScatter.options.scales.y.ticks.callback = Y === 'e' ? logTick : Y === 'i' ? v => nf(0).format(v) : v => (v > 0 ? '+' : '') + nf(0).format(v) + '%';
-  cScatter.options.scales.x.title.text = 'Σ área queimada (ha, escala log)';
-  cScatter.options.scales.y.title.text = Y === 'e' ? 'Σ emissão (' + gu + ', escala log)' : Y === 'i' ? 'Σ emissão ÷ Σ área queimada (' + gu + '/ha)'
-    : 't/ha do ponto ÷ t/ha do seu grupo − 1 (%)';
-  cScatter.options.plugins.tooltip.callbacks.label = c => {
-    const d = c.dataset;
-    if (d.isAll) return Y === 'd' ? ' média do grupo (0%)' : ' todos: ' + nf(1).format(KK) + ' ' + gu + '/ha';
-    if (d.isLine) return ' reta ' + d.ent.name + ': b = ' + nf(2).format(d.ent.fit.b) + ' (' + readB(d.ent.fit) + ')';
-    const q = c.raw;
-    return ' ' + d.ent.name + ' · ' + q.per + ': ' + fmtHa(q.x).join(' ') + ' · ' + fmtT(q.e).join(' ') + ' · '
-      + nf(1).format(q.e / q.x) + ' ' + gu + '/ha (' + fmtDev(q.dev) + ' vs média do grupo)';
-  };
-  themeChart(cScatter);
-  ['x', 'y'].forEach(a => { cScatter.options.scales[a].title.color = css('--muted'); });
-  cScatter.update();
-
-  const gName = SC_DIMS[SC.g].name, pName = SC_DIMS[SC.p].name, pd = SC_DIMS[SC.p];
-  $('tScatter').textContent = Y === 'e' ? 'Área queimada × emissão' : Y === 'i' ? 'Área queimada × emissão por hectare queimado'
-    : 'Desvio da emissão por hectare em relação à média do grupo';
-  $('sScatter').textContent = 'Cada ponto é ' + pd.art + ' ' + pName + ' dentro de ' + SC_DIMS[SC.g].art + ' ' + gName
-    + (Y === 'd' ? ' · 0% = a média do próprio grupo (Σ emissão ÷ Σ área)'
-      : ' · cada ' + gName + ' tem a sua reta ajustada: emissão = a · área^b · tracejada: todos (' + nf(1).format(KK) + ' ' + gu + '/ha)')
-    + ' · rótulos: as 5 maiores anomalias em toneladas';
-  $('scHint').textContent = Y === 'e'
-    ? 'Leia a inclinação de cada reta (b). b > 1: quando o fogo cresce, ele avança para vegetação com mais carbono por hectare (escala). '
-      + 'b < 1: os meses ou anos grandes se espalham por vegetação mais pobre (dilui). b ≈ 1: a emissão por hectare não depende do tamanho do fogo. '
-      + 'A altura da reta é a emissão por hectare; a distância vertical entre duas retas é a razão entre elas.'
-    : Y === 'i' ? 'Mesma reta, vista em t/ha: subindo para a direita, o fogo escala; descendo, dilui; plana, estável.'
-      : 'Pontos acima de 0% emitiram mais por hectare do que o normal do seu grupo: queimou vegetação com mais carbono que o habitual.';
-
-  // tabela: uma linha por entidade
-  const tb = $('scTab'); tb.textContent = '';
-  const hr = tb.createTHead().insertRow();
-  [gName[0].toUpperCase() + gName.slice(1), 'Pontos', 'Σ área queimada (ha)', 'Σ emissão (t)', 'Σ emissão ÷ Σ área (' + gu + '/ha)',
-   'Faixa dos pontos (t/ha)', 'Inclinação b (± IC 95%)', 'Quando o fogo cresce', 'R² (log)']
-    .forEach(h => { const th = document.createElement('th'); th.scope = 'col'; th.textContent = h; hr.appendChild(th); });
-  const body = tb.createTBody(), maxK = Math.max(...ents.map(en => en.kk));
-  const timeG = SC.g === 'year' || SC.g === 'mon';  // tempo: ordem cronológica; demais: pela inclinação
-  [...ents].sort((x, y) => timeG ? x.k - y.k : ((y.fit ? y.fit.b : 0) - (x.fit ? x.fit.b : 0))).forEach(en => {
-    const tr = body.insertRow(); if (SC.hi !== null) tr.className = SC.hi === en.k ? 'on' : 'dim';
-    tr.tabIndex = 0; tr.title = 'Destacar ' + en.full;
-    const th = document.createElement('th'); th.scope = 'row'; const i = document.createElement('i'); i.style.background = en.color;
-    th.append(i, document.createTextNode(en.name)); tr.appendChild(th);
-    tr.insertCell().textContent = String(en.pts.length);
-    tr.insertCell().textContent = nf(0).format(en.sa);
-    tr.insertCell().textContent = nf(0).format(en.se);
-    const kc = tr.insertCell(); const bar = document.createElement('span'); bar.className = 'kbar'; bar.style.width = (40 * en.kk / maxK).toFixed(1) + 'px';
-    bar.style.background = en.color; kc.append(bar, document.createTextNode(nf(1).format(en.kk)));
-    tr.insertCell().textContent = nf(1).format(en.lo) + ' a ' + nf(1).format(en.hi);
-    const f = en.fit;
-    tr.insertCell().textContent = !f ? '—' : nf(2).format(f.b) + (f.se !== null ? ' ± ' + nf(2).format(1.96 * f.se) : '');
-    const rd = tr.insertCell(); const lab = readB(f); rd.textContent = lab; rd.className = 'rd-' + (lab === 'escala' ? 'up' : lab === 'dilui' ? 'down' : 'eq');
-    tr.insertCell().textContent = !f || f.r2 === null ? '—' : nf(2).format(f.r2);
-    const pick = () => { SC.hi = SC.hi === en.k ? null : en.k; renderScatter(); };
-    tr.addEventListener('click', pick); tr.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pick(); } });
-  });
-  const tf = tb.createTFoot().insertRow();
-  const fth = document.createElement('th'); fth.scope = 'row'; fth.textContent = 'Todos'; tf.appendChild(fth);
-  tf.insertCell().textContent = String(ents.reduce((s, en) => s + en.pts.length, 0));
-  tf.insertCell().textContent = nf(0).format(SA); tf.insertCell().textContent = nf(0).format(SE);
-  tf.insertCell().textContent = nf(1).format(KK); ['', '', '', ''].forEach(t => { tf.insertCell().textContent = t; });
-
-  // lista das maiores anomalias
-  const an = $('scAnom'); an.textContent = '';
-  pool.slice(0, 5).forEach(({ q, en }) => {
-    const li = document.createElement('li'); const i = document.createElement('i'); i.style.background = en.color;
-    const b = document.createElement('b'); b.textContent = en.name + ' · ' + q.per;
-    li.append(i, b, document.createTextNode(': ' + nf(1).format(q.y / q.x) + ' ' + gu + '/ha, ' + fmtDev(q.dev) + ' vs a média do grupo ('
-      + nf(1).format(en.kk) + ') → ' + (q.exc >= 0 ? '+' : '−') + fmtT(Math.abs(q.exc)).join(' ') + ' em relação ao esperado'));
-    an.appendChild(li);
-  });
-}
-
 // ---------- matriz: emissão por hectare queimado, bioma × mês do ano ----------
 function renderSeasonIntensity() {
   const [m0, m1] = monthRange();
@@ -2090,45 +1850,57 @@ function renderExternal(R) {
   const box = $('fExt'); box.textContent = '';
   vars.forEach(v => { const b = document.createElement('button'); b.type = 'button'; b.textContent = VN[v] || v;
     b.setAttribute('aria-pressed', String(v === extVar)); b.addEventListener('click', () => { extVar = v; renderExternal(R); }); box.appendChild(b); });
-  const srcs = [...new Set(X.rows.map(r => r[0]))];
-  const extYears = new Set(X.rows.map(r => String(r[1])));
+  const rowsV = X.rows.filter(r => r[2] === extVar);
+  const srcs = [...new Set(rowsV.map(r => r[0]))];
+  const scope = X.scope || {};
+  const needNat = srcs.some(sn => scope[sn] === 'nativa');
+  const extYears = new Set(rowsV.map(r => String(r[1])));
   const years = YEARS.filter(y => !(y === LAST.slice(0, 4) && LAST_YEAR_PARTIAL) && extYears.has(y));
-  // monitor, Brasil inteiro, sem filtros (para ser comparável)
-  const mon = {}, monLo = {}, monHi = {};
+  // monitor, Brasil inteiro, sem filtros: todas as classes e só vegetação nativa
   const gi = { CO2: 'co2', CH4: 'ch4', N2O: 'n2o' }[extVar], gw = { CO2: 1, CH4: DATA.method.gwp.CH4, N2O: DATA.method.gwp.N2O }[extVar];
+  const Z = () => ({ v: {}, lo: {}, hi: {} }), all = Z(), nat = Z();
+  const add = (o, y, v, lo, hi) => { o.v[y] = (o.v[y] || 0) + v; o.lo[y] = (o.lo[y] || 0) + lo; o.hi[y] = (o.hi[y] || 0) + hi; };
   for (let i = 0; i < N; i++) {
-    const y = MONTHS[F.m[i]].slice(0, 4); if (!gi) break;
-    const j = { co2: 0, ch4: 1, n2o: 2 }[gi], v = F[gi][i] / gw;
-    mon[y] = (mon[y] || 0) + v; monLo[y] = (monLo[y] || 0) + v * ULO[F.c[i]][j]; monHi[y] = (monHi[y] || 0) + v * UHI[F.c[i]][j];
+    const y = MONTHS[F.m[i]].slice(0, 4), c = F.c[i];
+    let v, lo, hi;
+    if (gi) { const j = { co2: 0, ch4: 1, n2o: 2 }[gi]; v = F[gi][i] / gw; lo = v * ULO[c][j]; hi = v * UHI[c][j]; }
+    else if (extVar === 'AREA') { v = lo = hi = F.a[i]; }
+    else continue;
+    add(all, y, v, lo, hi); if (IS_NAT[c]) add(nat, y, v, lo, hi);
   }
-  if (extVar === 'MS') Object.entries(DATA.dm_year).forEach(([y, v]) => { mon[y] = v; });
-  if (extVar === 'AREA') for (let i = 0; i < N; i++) { const y = MONTHS[F.m[i]].slice(0, 4); mon[y] = (mon[y] || 0) + F.a[i]; }
+  if (extVar === 'MS') Object.entries(DATA.dm_year).forEach(([y, v]) => { all.v[y] = v; });
   const isA = extVar === 'AREA', fmtX = v => (isA ? fmtHa(v) : fmtT(v)).join(' ');
-  const pal = ['--x1', '--x2', '--s7', '--s5'];
-  const ds = [{ label: 'Monitor (este painel)', data: years.map(y => mon[y] ?? null),
-    err: gi ? years.map(y => mon[y] ? [monLo[y], monHi[y]] : null) : null, ...barStyle(css('--accent')) }]
-    .concat(srcs.map((sname, k) => ({ label: sname, data: years.map(y => { const r = X.rows.find(r => r[0] === sname && String(r[1]) === y && r[2] === extVar); return r ? r[3] : null; }),
-      ...barStyle(css(pal[k % pal.length])) })));
+  const errOf = o => gi ? years.map(y => o.v[y] ? [o.lo[y], o.hi[y]] : null) : null;
+  const pal = { 'GFED5.1': '--x1', 'SEEG 14': '--x2', 'CAMS GFAS': '--s7' };
+  const ds = [{ label: 'Monitor · todas as classes', data: years.map(y => all.v[y] ?? null), err: errOf(all), mon: 'todas', ...barStyle(css('--accent')) }];
+  if (needNat) ds.push({ label: 'Monitor · só vegetação nativa', data: years.map(y => nat.v[y] ?? null), err: errOf(nat), mon: 'nativa', ...barStyle(css('--nat')) });
+  srcs.forEach((sn, k) => ds.push({ label: sn + (scope[sn] === 'nativa' ? ' · só vegetação nativa' : ' · todos os fogos'), src: sn,
+    data: years.map(y => { const r = rowsV.find(r => r[0] === sn && String(r[1]) === y); return r ? r[3] : null; }),
+    ...barStyle(css(pal[sn] || ['--s5', '--s3'][k % 2])) }));
   if (!cExt) cExt = makeBar($('cExt'), false);
   cExt.data.labels = years; cExt.data.datasets = ds;
   cExt.options.scales.x.stacked = cExt.options.scales.y.stacked = false;
   cExt.options.plugins.tooltip.callbacks.label = c => {
-    const m0 = ds[0].data[c.dataIndex], v = c.parsed.y;
-    return ' ' + c.dataset.label + ': ' + fmtX(v) + (c.datasetIndex > 0 && m0 && v ? ' (monitor = ' + nf(2).format(m0 / v) + '×)' : '');
+    const d = c.dataset, v = c.parsed.y;
+    if (!d.src) return ' ' + d.label + ': ' + fmtX(v);
+    // compara com o monitor de mesmo escopo
+    const m = ds.find(x => x.mon === (scope[d.src] === 'nativa' ? 'nativa' : 'todas')), m0 = m ? m.data[c.dataIndex] : null;
+    return ' ' + d.label + ': ' + fmtX(v) + (m0 && v ? ' (monitor = ' + nf(2).format(m0 / v) + '×)' : '');
   };
   cExt.options.plugins.tooltip.callbacks.afterLabel = c => { const r = ds[c.datasetIndex].err && ds[c.datasetIndex].err[c.dataIndex];
     return r ? ' faixa (95%): ' + fmtX(r[0]) + ' a ' + fmtX(r[1]) : ''; };
-  cExt.options.scales.y.ticks.callback = isA ? v => axisTick(v) + ' ha' : axisTick;
+  cExt.options.scales.y.ticks.callback = isA ? v => axisTick(v) + ' ha' : v => axisTick(v) + ' t';
   const his = ds.flatMap(d => (d.err || []).filter(Boolean).map(r => r[1]));
   cExt.options.scales.y.suggestedMax = his.length ? Math.max(...his) * 1.1 : undefined;
   themeChart(cExt); cExt.update();
   legend($('lgExt'), ds.map(d => [d.label, d.backgroundColor]));
-  $('sExt').textContent = (isA ? 'Área queimada anual no Brasil (ha)' : extVar === 'MS' ? 'Matéria seca queimada no Brasil (t por ano)'
-    : 'Emissão anual de ' + VN[extVar] + ' no Brasil, em toneladas do próprio gás (sem GWP)')
-    + ' · anos completos com dados nas duas bases' + (gi ? ' · traço: faixa de incerteza do monitor (95%)' : '') + ' · filtros do painel não se aplicam';
-  $('extNote').textContent = Object.entries(X.notes || {}).map(([k, v]) => k + ': ' + v).join(' · ')
-    + (extVar === 'MS' ? ' · Matéria seca compara a quantidade queimada sem depender dos fatores de emissão.' : '')
-    + (isA ? ' · Área: monitor MapBiomas Fogo (30 m) × área queimada do GFED5.1 com pequenos fogos.' : '');
+  $('sExt').textContent = (isA ? 'Σ área queimada por ano no Brasil (ha)' : extVar === 'MS' ? 'Σ matéria seca queimada por ano no Brasil (t)'
+    : 'Σ emissão de ' + VN[extVar] + ' por ano no Brasil, em toneladas do próprio gás (sem GWP)')
+    + (gi ? ' · traço: faixa de incerteza do monitor (95%)' : '') + ' · compare cada base com o monitor de mesmo escopo · os filtros do painel não se aplicam';
+  const notes = srcs.map(sn => { const t = (X.notes || {})[sn] || ''; return t.startsWith(sn) ? t : sn + ': ' + t; });
+  if (extVar === 'MS') notes.push('Matéria seca compara a quantidade queimada sem depender dos fatores de emissão.');
+  if (srcs.includes('SEEG 14') && extVar === 'CO2') notes.push('No CO₂ o SEEG usa outra conta (mortalidade tardia da floresta, sem CO₂ no campo); CH₄ e N₂O são a comparação mais direta.');
+  $('extNote').textContent = notes.join(' · ');
 }
 function renderMatrices(M) {
   M = M || aggregateYears();
@@ -2324,7 +2096,7 @@ function renderAll() {
   renderSlice();
   const M = aggregateYears();
   renderKPIs(R); renderMonthly(R); renderSide(R); renderAnnual(R); renderClass(R); renderUF(R);
-  renderScatter(); renderSeasonIntensity(); renderExternal(R); renderMonthMatrix(R); renderMatrices(M); renderTable(R);
+  renderSeasonIntensity(); renderExternal(R); renderMonthMatrix(R); renderMatrices(M); renderTable(R);
 }
 
 $('meta').textContent = 'Dados de ' + mLong(MONTHS[0]) + ' a ' + mLong(LAST) + ' · ' + NM + ' meses · '
