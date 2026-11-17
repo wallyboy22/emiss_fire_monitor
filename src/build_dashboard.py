@@ -20,6 +20,7 @@ import sys as _sys
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
 import primeiro_ensaio as _pe  # noqa: E402  (fatores usados nas imagens; fonte única para a página de método)
 import destaques as _dq  # noqa: E402  (página "Destaques do mês")
+import site_header as _sh  # noqa: E402  (cabeçalho comum)
 
 HERE = Path(__file__).resolve().parent
 if HERE.name == "src":  # repositório público
@@ -544,6 +545,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+__SITE_HEAD__
 <title>Monitor de Emissões por Fogo</title>
 <meta name="description" content="Emissões mensais de CO2, CH4 e N2O por queima de vegetação no Brasil, por bioma, UF e classe de cobertura.">
 <script>
@@ -852,9 +854,11 @@ table.mtab td { border-radius: 3px; font-variant-numeric: tabular-nums; }
 .method ul { margin: 8px 0 0; padding-left: 18px; }
 .method li { margin: 3px 0; }
 footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
+__SITE_CSS__
 </style>
 </head>
 <body>
+__SITE_HEADER__
 <div class="wrap">
   <header>
     <div class="titles">
@@ -862,10 +866,6 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
     <p>Emissões mensais de CO₂, CH₄ e N₂O pela queima de vegetação nativa e de áreas agropecuárias no Brasil,
       por bioma, unidade da federação e classe de cobertura.</p>
     <div class="meta" id="meta"></div>
-    </div>
-    <div class="hdr-right">
-      <nav class="tabs" aria-label="Páginas"><a href="#painel" id="tabPainel">Painel</a><a href="#metodo" id="tabMetodo">Método</a><a href="destaques.html" id="tabDestaques" title="Relatório do mês selecionado: área queimada e emissões">Destaques do mês</a></nav>
-      <div class="seg small" id="fTheme" role="group" aria-label="Tema"></div>
     </div>
   </header>
 
@@ -1304,9 +1304,9 @@ seg('fGroup', 'group', DETAIL_OPTS);
     .concat(COVER.map(([name, color], k) => ['g' + k, DATA.cover_short[name] || name, name, color]));
   seg('fCover', 'cover', items);
 })();
-seg('fTheme', 'theme', [['light', 'Claro'], ['dark', 'Escuro']], () => {
-  document.documentElement.setAttribute('data-theme', S.theme); renderAll(); buildMethod();
-});
+// tema: botão do cabeçalho comum (site_header.py)
+S.theme = document.documentElement.getAttribute('data-theme') || 'light';
+document.addEventListener('emf-theme', ev => { S.theme = ev.detail; renderAll(); buildMethod(); });
 seg('fGas', 'gas', [['total', 'CO₂e', 'CO₂e total (CO₂ + CH₄ + N₂O)'], ['co2', 'CO₂'], ['ch4', 'CH₄', 'CH₄ em CO₂e'], ['n2o', 'N₂O', 'N₂O em CO₂e']]);
 seg('fPeriod', 'period', [['all', 'Tudo'], ['l12', '12m', 'Últimos 12 meses']].concat([...YEARS].reverse().map(y =>
   ['y' + y, y + (y === LAST.slice(0, 4) && LAST_YEAR_PARTIAL ? '*' : ''),
@@ -2155,6 +2155,7 @@ renderAll();
 buildMethod();
 route();
 </script>
+__SITE_JS__
 </body>
 </html>
 """
@@ -2187,6 +2188,10 @@ def main():
             .replace("__CSV_NAME__", Path(args.csv_href).name)
             .replace("__BUILD_DATE__", pd.Timestamp.now().strftime("%d/%m/%Y"))
             .replace("__DATA__", json.dumps(payload, ensure_ascii=False, separators=(",", ":"))))
+    pages = [("index.html#painel", "Painel", "tabPainel"), ("index.html#metodo", "Método", "tabMetodo"),
+             ("destaques.html", "Destaques do mês", "tabDestaques")]
+    html = (html.replace("__SITE_HEAD__", _sh.JS_HEAD).replace("__SITE_CSS__", _sh.CSS)
+            .replace("__SITE_HEADER__", _sh.html(pages, "tabPainel")).replace("__SITE_JS__", _sh.JS_BODY))
     for key, svg in method_svgs().items():
         html = html.replace(key, svg)
     args.html.write_text(html, encoding="utf-8")

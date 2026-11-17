@@ -112,10 +112,16 @@ def geo_payload(geo_dir, biomes, ufs):
 
 
 def write(payload, geo_dir, out_path, build_date, dashboard_href="index.html"):
+    import site_header as sh
     data = {k: payload[k] for k in ("months", "biomes", "ufs", "classes", "facts", "cover")}
     data["geo"] = geo_payload(geo_dir, payload["biomes"], payload["ufs"])
     html = (TEMPLATE.replace("__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
             .replace("__BUILD_DATE__", build_date).replace("__DASH__", dashboard_href))
+    pages = [(dashboard_href + "#painel", "Painel", "tabPainel"), (dashboard_href + "#metodo", "Método", "tabMetodo"),
+             ("destaques.html", "Destaques do mês", "tabDestaques")]
+    html = (html.replace("__SITE_HEAD__", sh.JS_HEAD).replace("__SITE_CSS__", sh.CSS)
+            .replace("__SITE_HEADER__", sh.html(pages, "tabDestaques")).replace("__SITE_JS__", sh.JS_BODY)
+            .replace("__LOGOS__", sh.logos_html().replace("'", "\'")))
     Path(out_path).write_text(html, encoding="utf-8")
     return len(html)
 
@@ -125,31 +131,38 @@ TEMPLATE = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+__SITE_HEAD__
 <title>Destaques do mês</title>
 <meta name="description" content="Destaques mensais do fogo no Brasil: área queimada do MapBiomas Monitor do Fogo e as emissões estimadas dessa área.">
 <style>
 :root {
-  --page: #efe9df; --surface: #ffffff; --ink: #1f1a15; --ink-2: #4f4439; --muted: #7a6c5d;
-  --line: #e4dccf; --soft: #f5f1ea; --bar: #c9c1b6;
-  --area: #d23b25; --area-2: #a3211a; --emis: #4b3f8f; --emis-2: #2f2566;
-  --up: #b3261e; --down: #1f7a3f; --nat: #1f8d49; --ant: #f6ecc4;
+  --page: #f3ede2; --surface: #fbf8f2; --ink: #2a2119; --ink-2: #5b4a3b; --muted: #7d6b58;
+  --line: #e6dccb; --grid: #e6dccb; --axis: #cbbca4; --soft: #f0e8da; --bar: #cfc4b4; --nodata: #ebe4d8;
+  --accent: #9a4f26; --accent-weak: #ecd8c6; --on-accent: #fbf8f2;
+  --area: #d23b25; --emis: #4b3f8f; --up: #b3261e; --down: #1f7a3f; --nat: #1f8d49; --ant: #f6ecc4;
+}
+:root[data-theme="dark"] {
+  --page: #16120e; --surface: #201b16; --ink: #f2ece2; --ink-2: #cdbfac; --muted: #9c8c78;
+  --line: #3a3128; --grid: #2f2821; --axis: #463b30; --soft: #2a231c; --bar: #5a4e42; --nodata: #2e2720;
+  --accent: #d98c5f; --accent-weak: #4d3222; --on-accent: #16120e;
+  --area: #ec6a52; --emis: #9585e6; --up: #e66767; --down: #4cbf72; --nat: #2fa35c; --ant: #e8d9a8;
 }
 * { box-sizing: border-box; }
 html { background: var(--page); }
 body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 "Montserrat", "Segoe UI", system-ui, -apple-system, sans-serif;
   -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.bar { position: sticky; top: 0; z-index: 5; background: var(--ink); color: #f6f1ea; }
-.bar .in { max-width: 1240px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.bar b { font-size: 14px; letter-spacing: .02em; }
-.bar label { font-size: 13px; opacity: .85; }
-.bar select, .bar button, .bar a { font: inherit; font-size: 13px; border-radius: 999px; padding: 6px 14px; border: 1px solid #5d544b; background: #2d2721; color: #f6f1ea; text-decoration: none; cursor: pointer; }
-.bar select:focus-visible, .bar button:focus-visible, .bar a:focus-visible { outline: 2px solid #f0b184; outline-offset: 2px; }
-.bar .sp { flex: 1; }
-.bar nav { display: flex; gap: 6px; flex-wrap: wrap; }
-.bar nav a { padding: 4px 10px; font-size: 12px; }
+.tools { max-width: 1240px; margin: 0 auto; padding: 14px 16px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.tools label { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.tools select, .tools button, .tools nav a { font: inherit; font-size: 13px; border-radius: 999px; padding: 6px 13px; border: 1px solid var(--axis);
+  background: var(--surface); color: var(--ink); text-decoration: none; cursor: pointer; }
+.tools nav { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.tools nav a { padding: 4px 11px; font-size: 12.5px; color: var(--ink-2); }
+.tools nav a:hover { background: var(--accent-weak); }
+.tools select:focus-visible, .tools button:focus-visible, .tools nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 main { max-width: 1240px; margin: 0 auto; padding: 18px 16px 40px; }
 .pg { background: var(--surface); border-radius: 14px; padding: 26px 34px 18px; margin-bottom: 22px; box-shadow: 0 1px 2px rgba(40,30,20,.08); display: flex; flex-direction: column; }
 .ph { display: flex; align-items: center; gap: 16px; border-bottom: 3px solid var(--area); padding-bottom: 12px; margin-bottom: 14px; }
+.ph .site-logos .mbf { height: 22px; } .ph .site-logos .ipam { height: 30px; }
 .ph .brand { font-weight: 600; font-size: 15px; line-height: 1.15; color: var(--ink-2); }
 .ph .brand small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; }
 .ph .tag { color: var(--area); font-weight: 800; font-size: 20px; letter-spacing: .03em; border-left: 3px solid var(--area); border-right: 3px solid var(--area); padding: 2px 16px; }
@@ -194,7 +207,7 @@ svg text { font-family: inherit; }
 .t1, .t2 { display: flex; height: 22px; border-radius: 5px; overflow: hidden; gap: 2px; background: var(--surface); }
 .t2 { margin-top: 3px; }
 .t1 span, .t2 span { display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; min-width: 0; overflow: hidden; white-space: nowrap; }
-.t1 .n { background: var(--nat); color: #fff; } .t1 .a { background: var(--ant); color: var(--ink); box-shadow: inset 0 0 0 1px #e2d29a; }
+.t1 .n { background: var(--nat); color: #fff; } .t1 .a { background: var(--ant); color: #2a2119; box-shadow: inset 0 0 0 1px #e2d29a; }
 .tiers .div { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
 .leg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--ink-2); margin-top: 8px; }
 .leg i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
@@ -203,13 +216,13 @@ svg text { font-family: inherit; }
 .mapwrap { position: relative; }
 .mapwrap .tog { display: flex; gap: 4px; justify-content: center; margin: 4px 0 6px; }
 .tog button { font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
-.tog button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
+.tog button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--surface); font-weight: 600; }
 .tog button:focus-visible { outline: 2px solid var(--emis); outline-offset: 2px; }
 .mleg { font-size: 11.5px; color: var(--ink-2); margin-top: 4px; }
 .mleg b { display: block; font-size: 12px; margin-bottom: 3px; color: var(--ink); }
 .mleg div { display: flex; align-items: center; gap: 6px; margin: 1px 0; }
 .mleg i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
-.callout { width: 150px; height: 150px; border-radius: 50%; background: var(--emis); color: #fff; display: flex; align-items: center; justify-content: center; text-align: center;
+.callout { width: 150px; height: 150px; border-radius: 50%; background: #4b3f8f; color: #fff; display: flex; align-items: center; justify-content: center; text-align: center;
   font-weight: 800; font-size: 13px; line-height: 1.25; padding: 18px; text-transform: uppercase; box-shadow: 0 8px 24px rgba(75,63,143,.3); flex: none; }
 .callout.sm { width: 92px; height: 92px; font-size: 11.5px; padding: 10px; }
 .mapfoot { display: flex; gap: 18px; align-items: flex-end; justify-content: space-between; margin-top: 6px; }
@@ -257,10 +270,11 @@ svg text { font-family: inherit; }
   .ph .when { margin-left: 0; }
   .chip { flex-basis: 100%; }
 }
+__SITE_CSS__
 @page { size: A4 landscape; margin: 7mm; }
 @media print {
   html, body { background: #fff; }
-  .bar, .tog { display: none !important; }
+  .tools, .tog { display: none !important; }
   main { padding: 0; max-width: none; }
   .pg { box-shadow: none; border-radius: 0; margin: 0; padding: 0; break-after: page; width: 1500px; zoom: .7; }
   .pg:last-child { break-after: auto; }
@@ -275,14 +289,12 @@ svg text { font-family: inherit; }
 </style>
 </head>
 <body>
-<div class="bar"><div class="in">
-  <b>Destaques do mês</b>
+__SITE_HEADER__
+<div class="tools">
   <label for="selM">Mês</label><select id="selM"></select>
   <button type="button" id="btnPrint">Imprimir ou salvar PDF</button>
-  <span class="sp"></span>
   <nav aria-label="Seções"><a href="#p1">Brasil</a><a href="#p2">Biomas</a><a href="#p3">Bioma</a><a href="#p4">Estados</a><a href="#p5">Estado</a><a href="#p6">Área × emissão</a></nav>
-  <a href="__DASH__">← Painel</a>
-</div></div>
+</div>
 <main id="main"></main>
 <script>
 const DATA = __DATA__;
@@ -363,18 +375,18 @@ function yearBars(vals, years, color, unit, aria) {
   const slot = pw / vals.length, bw = Math.min(30, slot * 0.64);
   let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(aria) + '">';
   for (let k = 0; k <= 4; k++) { const v = top * k / 4, yy = T + ph - ph * k / 4;
-    s += '<line x1="' + L + '" x2="' + (L + pw) + '" y1="' + yy + '" y2="' + yy + '" stroke="#ece6dc"/>';
-    s += '<text x="' + (L - 6) + '" y="' + (yy + 3.5) + '" font-size="9.5" fill="#7a6c5d" text-anchor="end">' + nf(Number.isInteger(Math.round(v * 100) / 100) ? 0 : (Math.round(v * 10) / 10 === v ? 1 : 2)).format(v) + '</text>'; }
+    s += '<line x1="' + L + '" x2="' + (L + pw) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--grid)"/>';
+    s += '<text x="' + (L - 6) + '" y="' + (yy + 3.5) + '" font-size="9.5" fill="var(--muted)" text-anchor="end">' + nf(Number.isInteger(Math.round(v * 100) / 100) ? 0 : (Math.round(v * 10) / 10 === v ? 1 : 2)).format(v) + '</text>'; }
   vals.forEach((v, i) => {
     const x = L + slot * i + (slot - bw) / 2, last = i === vals.length - 1, h = Math.max(0, T + ph - y(v)), yy = y(v);
     s += '<path d="M' + x + ' ' + (T + ph) + 'V' + (yy + Math.min(3, h)) + 'q0 -' + Math.min(3, h) + ' ' + Math.min(3, h) + ' -' + Math.min(3, h) + 'H' + (x + bw - Math.min(3, h)) + 'q' + Math.min(3, h) + ' 0 ' + Math.min(3, h) + ' ' + Math.min(3, h) + 'V' + (T + ph) + 'Z" fill="' + (last ? color : 'var(--bar)') + '"><title>' + years[i] + ': ' + int(v) + ' ' + unit + '</title></path>';
-    s += '<text x="' + (x + bw / 2) + '" y="' + (yy - 5) + '" font-size="' + (last ? 10.5 : 9.5) + '" font-weight="' + (last ? 800 : 600) + '" fill="' + (last ? color : '#4f4439') + '" text-anchor="middle">' + nf(dec || v / div < 10 ? 1 : 0).format(v / div) + '</text>';
-    s += '<text x="' + (x + bw / 2) + '" y="' + (H - 9) + '" font-size="9.5" fill="' + (last ? color : '#7a6c5d') + '" font-weight="' + (last ? 700 : 400) + '" text-anchor="middle">' + years[i] + '</text>';
+    s += '<text x="' + (x + bw / 2) + '" y="' + (yy - 5) + '" font-size="' + (last ? 10.5 : 9.5) + '" font-weight="' + (last ? 800 : 600) + '" fill="' + (last ? color : 'var(--ink-2)') + '" text-anchor="middle">' + nf(dec || v / div < 10 ? 1 : 0).format(v / div) + '</text>';
+    s += '<text x="' + (x + bw / 2) + '" y="' + (H - 9) + '" font-size="9.5" fill="' + (last ? color : 'var(--muted)') + '" font-weight="' + (last ? 700 : 400) + '" text-anchor="middle">' + years[i] + '</text>';
   });
   if (mean !== null) { const ym = y(mean);
-    s += '<line x1="' + L + '" x2="' + (L + pw + 4) + '" y1="' + ym + '" y2="' + ym + '" stroke="#1f1a15" stroke-dasharray="4 3" stroke-width="1.2"/>';
-    s += '<text x="' + (L + pw + 7) + '" y="' + (ym - 3) + '" font-size="9.5" fill="#4f4439">média</text>';
-    s += '<text x="' + (L + pw + 7) + '" y="' + (ym + 9) + '" font-size="10" font-weight="800" fill="#1f1a15">' + nf(mean / div < 10 ? 1 : 0).format(mean / div) + '</text>'; }
+    s += '<line x1="' + L + '" x2="' + (L + pw + 4) + '" y1="' + ym + '" y2="' + ym + '" stroke="var(--ink)" stroke-dasharray="4 3" stroke-width="1.2"/>';
+    s += '<text x="' + (L + pw + 7) + '" y="' + (ym - 3) + '" font-size="9.5" fill="var(--ink-2)">média</text>';
+    s += '<text x="' + (L + pw + 7) + '" y="' + (ym + 9) + '" font-size="10" font-weight="800" fill="var(--ink)">' + nf(mean / div < 10 ? 1 : 0).format(mean / div) + '</text>'; }
   return [s + '</svg>', lab];
 }
 
@@ -445,12 +457,12 @@ function choropleth(kind, vals, total, key, aria) {
   const ramp = RAMP[key], col = k => ramp[Math.round(k * (ramp.length - 1) / Math.max(1, nCls - 1))];
   let s = '<svg viewBox="0 0 ' + G.w + ' ' + G.h + '" role="img" aria-label="' + esc(aria) + '">', lab = '';
   feats.forEach(f => { const v = vals[f.k], k = br.length > 1 ? classOf(v, br) : (v > 0 ? 0 : -1), name = kind === 'b' ? BIOMES[f.k] : UFS[f.k].sigla;
-    const fill = k < 0 ? '#eeeae4' : col(k);
-    s += '<path d="' + f.d + '" fill="' + fill + '" stroke="#fff" stroke-width="' + (kind === 'b' ? 1.4 : 0.9) + '" stroke-linejoin="round"><title>' + esc(kind === 'b' ? name : UF_NAME[f.k]) + ': ' + int(v) + ' ' + (key === 'E' ? UE : UA) + ' · ' + pctTxt(pct(v, total)) + '</title></path>';
+    const fill = k < 0 ? 'var(--nodata)' : col(k);
+    s += '<path d="' + f.d + '" fill="' + fill + '" stroke="var(--surface)" stroke-width="' + (kind === 'b' ? 1.4 : 0.9) + '" stroke-linejoin="round"><title>' + esc(kind === 'b' ? name : UF_NAME[f.k]) + ': ' + int(v) + ' ' + (key === 'E' ? UE : UA) + ' · ' + pctTxt(pct(v, total)) + '</title></path>';
     const p = pct(v, total), ink = k >= 3 ? '#fff' : '#1f1a15';
     if (f.lead) {
-      s += '<polyline points="' + f.lx + ',' + f.ly + ' ' + (G.mw - 4) + ',' + f.ty + ' ' + f.tx + ',' + f.ty + '" fill="none" stroke="#1f1a15" stroke-width=".7"/><circle cx="' + f.lx + '" cy="' + f.ly + '" r="1.8" fill="#1f1a15"/>';
-      lab += '<text x="' + (f.tx + 3) + '" y="' + (f.ty + 3.5) + '" font-size="10.5" fill="#1f1a15"><tspan font-weight="800">' + esc(name) + '</tspan> ' + mapNum(v) + (p >= 1 ? ' · ' + pctTxt(p) : '') + '</text>';
+      s += '<polyline points="' + f.lx + ',' + f.ly + ' ' + (G.mw - 4) + ',' + f.ty + ' ' + f.tx + ',' + f.ty + '" fill="none" stroke="var(--ink)" stroke-width=".7"/><circle cx="' + f.lx + '" cy="' + f.ly + '" r="1.8" fill="var(--ink)"/>';
+      lab += '<text x="' + (f.tx + 3) + '" y="' + (f.ty + 3.5) + '" font-size="10.5" fill="var(--ink)"><tspan font-weight="800">' + esc(name) + '</tspan> ' + mapNum(v) + (p >= 1 ? ' · ' + pctTxt(p) : '') + '</text>';
     } else {
       const big = kind === 'b' || p >= 3;
       lab += '<text x="' + f.lx + '" y="' + (f.ly - (big ? 4 : 0)) + '" font-size="' + (kind === 'b' ? 12 : 10.5) + '" font-weight="800" fill="' + ink + '" text-anchor="middle">' + esc(name) + '</text>'
@@ -462,14 +474,14 @@ function choropleth(kind, vals, total, key, aria) {
   let lg = '';
   for (let k = 0; k < nCls && br.length > 1; k++) lg += '<div><i style="background:' + col(k) + '"></i>' + mapNum(br[k]) + ' – ' + mapNum(br[k + 1]) + '</div>';
   if (br.length === 1) lg += '<div><i style="background:' + col(0) + '"></i>' + mapNum(br[0]) + '</div>';
-  lg += '<div><i style="background:#eeeae4"></i>sem área queimada</div>';
+  lg += '<div><i style="background:var(--nodata)"></i>sem área queimada</div>';
   return [s, lg];
 }
 function locator(kind, k) {
   const feats = kind === 'b' ? G.biomes : G.ufs;
   let s = '<svg viewBox="0 0 ' + G.mw + ' ' + G.h + '" role="img" aria-label="Localização">';
   if (kind === 'u') G.biomes.forEach(f => { s += '<path d="' + f.d + '" fill="none"/>'; });
-  feats.forEach(f => { s += '<path d="' + f.d + '" fill="' + (f.k === k ? 'var(--emis)' : '#e6e0d7') + '" stroke="#fff" stroke-width="1"/>'; });
+  feats.forEach(f => { s += '<path d="' + f.d + '" fill="' + (f.k === k ? 'var(--emis)' : 'var(--nodata)') + '" stroke="var(--surface)" stroke-width="1"/>'; });
   return s + '</svg>';
 }
 
@@ -493,7 +505,8 @@ function oneRank(names, V, tot, top, color, unit) {
 }
 
 // ---------- páginas ----------
-function pageHead(ctx) { return '<div class="ph"><div class="brand">Monitor de emissões<small>por fogo</small></div><div class="tag">DESTAQUES</div><div class="when">' + MES[ctx.mo - 1].toUpperCase() + ' ' + ctx.y + '</div></div>'; }
+const LOGOS = '__LOGOS__';
+function pageHead(ctx) { return '<div class="ph">' + LOGOS + '<div class="brand">Monitor de emissões<small>por fogo</small></div><div class="tag">DESTAQUES</div><div class="when">' + MES[ctx.mo - 1].toUpperCase() + ' ' + ctx.y + '</div></div>'; }
 function foot(ctx, n, extra) {
   return '<div class="src"><span>Área queimada: MapBiomas Monitor do Fogo. Emissões: estimativa deste monitor a partir da área queimada, dos estoques de carbono e de fatores do IPCC. Dados até '
     + MES[ctx.lastMo - 1] + ' de ' + ctx.lastY + '.' + (extra ? ' ' + extra : '') + '</span><span>' + n + '/6</span></div>';
@@ -650,7 +663,12 @@ const start = MONTHS.includes(want) ? want : MONTHS[NM - 1];
 sel.value = start; render(MONTHS.indexOf(start));
 sel.addEventListener('change', () => { const u = new URL(location.href); u.searchParams.set('m', sel.value); history.replaceState(null, '', u); render(MONTHS.indexOf(sel.value)); });
 $('btnPrint').addEventListener('click', () => window.print());
+// impressão sempre no tema claro
+let themeBeforePrint = null;
+window.addEventListener('beforeprint', () => { themeBeforePrint = document.documentElement.getAttribute('data-theme'); document.documentElement.setAttribute('data-theme', 'light'); });
+window.addEventListener('afterprint', () => { if (themeBeforePrint) document.documentElement.setAttribute('data-theme', themeBeforePrint); });
 </script>
+__SITE_JS__
 </body>
 </html>
 """
