@@ -186,7 +186,7 @@ UNC_Z = 1.96
 UNC_AREA = (0.10, "premissa", "Área queimada (MapBiomas Fogo)")
 UNC_FC = (0.03, "IPCC 2006: 0,47 (0,44 a 0,49)", "Fração de carbono da matéria seca")
 UNC_STOCK = {"nativa": (0.30, "premissa", "Estoque de carbono, mapa (formações nativas)"),
-             "agro": (0.40, "premissa", "Estoque médio do bioma (pastagem e agricultura)")}
+             "agro": (0.40, "premissa", "Biomassa aérea média do bioma (pastagem e agricultura)")}
 UNC_CF = (0.20, "premissa", "Fator de combustão")
 _EF_SAV = {"CO2": 95 / 1613, "CH4": 0.9 / 2.3, "N2O": 0.10 / 0.21}
 UNC_EF = {  # IPCC 2006, vol. 4, tab. 2.5 (média ± DP); onde a tabela não traz DP, premissa de 50%
@@ -398,15 +398,20 @@ def svg_pools():
     ag0 = x0 + 4 * (w + gap)
     ag_end = ag0 + 2 * (w + gap) - gap
     b.append(f'<path d="M{ag0},26 v-6 H{ag_end} v6" class="s-lnd"/>')
-    b.append(_tx((ag0 + ag_end) / 2, 14, "agropecuária: média do bioma", "s-tm"))
+    b.append(_tx((ag0 + ag_end) / 2, 14, "agropecuária: biomassa aérea média do bioma", "s-tm"))
     for i, cat in enumerate(cats):
         x = x0 + i * (w + gap)
         col = _cover_color(cat)
         coef = _pool_coefs(first[cat]["c_pool"])
         if cat in _pe.ANTROPICAS:
-            b.append(f'<rect x="{x}" y="40" width="{w}" height="160" rx="6" fill="{col}" class="s-seam"/>')
-            b.append(_tx(x + w / 2, 116, "estoque médio", "s-t2 s-dark"))
-            b.append(_tx(x + w / 2, 132, "do bioma", "s-t2 s-dark"))
+            for k, name, y, h in pools:
+                if k == "AGB":
+                    b.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="5" fill="{col}" class="s-seam"/>')
+                    b.append(_tx(x + w / 2, y + h / 2 - 2, "média do bioma", "s-t2 s-dark"))
+                    b.append(_tx(x + w / 2, y + h / 2 + 14, "(valor único)", "s-tm s-dark"))
+                else:
+                    b.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="5" class="s-no"/>')
+                    b.append(_tx(x + w / 2, y + h / 2 + 4, "não entra", "s-tm"))
         else:
             for k, name, y, h in pools:
                 c = coef[k]
@@ -426,7 +431,7 @@ def svg_pools():
         b.append(_tx(x + w / 2, 222, short.get(cat, cat.replace("Formação ", "")), "s-t"))
         b.append(_tx(x + w / 2, 240, f"combustão {rng}", "s-op s-sm"))
     return _svg(1000, 254, "Compartimentos de carbono por categoria: floresta usa madeira morta e serrapilheira; savana usa 26% "
-                "da biomassa aérea mais os resíduos; campos usam todos; pastagem e agricultura usam o estoque médio do bioma.",
+                "da biomassa aérea mais os resíduos; campos usam todos; pastagem e agricultura usam a biomassa aérea média do bioma.",
                 "".join(b),
                 caption="O que pode queimar em cada tipo de vegetação. Áreas coloridas entram no cálculo; tracejadas não. "
                         "Abaixo, o fator de combustão (a fração consumida pelo fogo), que varia por bioma. Alturas ilustrativas.")
@@ -656,7 +661,7 @@ header .meta { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
 .card-head .detail { flex: 0 1 auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .card-head .detail .flabel { white-space: nowrap; }
 .card-head .seg.small { flex-wrap: wrap; justify-content: flex-end; }
-#fPeriod { --cols: 5; } #fBiome { --cols: 3; } #fUF { --cols: 7; }
+#fPeriod { --cols: 5; } #fBiome { --cols: 3; } #fUF { --cols: 7; } #fRegion { --cols: 3; }
 #fUF button:first-child { grid-column: span 2; }
 #fCover button:nth-child(-n+3) { font-weight: 600; }
 .seg.small { display: flex; } .seg.small button { padding: 5px 10px; border-radius: 999px; }
@@ -670,7 +675,7 @@ header .meta { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
   .fbody { grid-template-columns: 1fr; gap: 0; max-height: none; flex: 1 1 auto; margin: 0 -14px; padding: 0 14px; }
   .fgroup { padding: 10px 0; border-bottom: 1px solid var(--grid); }
   .fgroup:last-child { border-bottom: 0; }
-  #fPeriod { --cols: 4; } #fBiome { --cols: 2; } #fUF { --cols: 6; } #fCover { --cols: 2; }
+  #fPeriod { --cols: 4; } #fBiome { --cols: 2; } #fUF { --cols: 6; } #fCover { --cols: 2; } #fRegion { --cols: 2; }
   .ftoggle { border-top: 1px solid var(--grid); }
   .filters.collapsed { padding: 6px 0; }
   .filters.collapsed .fhead { display: none; }
@@ -693,6 +698,16 @@ header .meta { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
 .tile .pick { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
 .tile.sel:hover .pick { color: var(--ink-2); }
 .tile.on .pick { color: var(--accent); font-weight: 650; }
+.dlrow { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.mxctl { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 8px 0 10px; }
+.mxctl > div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dlbtn { font: inherit; font-size: 12.5px; color: var(--accent); background: var(--surface); border: 1px solid var(--axis);
+  border-radius: 999px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+.dlbtn:hover { border-color: var(--accent); }
+.dlbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sec-head { margin: 28px 0 12px; padding-top: 14px; border-top: 1px solid var(--grid); }
+.sec-head h2 { font-size: 20px; margin: 0 0 4px; }
+.sec-head p { margin: 0; font-size: 13px; color: var(--muted); max-width: 820px; }
 .scope-tag { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 500; color: var(--muted); vertical-align: 2px;
   padding: 1px 8px; border: 1px dashed var(--axis); border-radius: 999px; white-space: nowrap; letter-spacing: 0; }
 .unc b { color: var(--ink-2); font-weight: 600; }
@@ -706,8 +721,13 @@ table.gastab th:first-child, table.gastab td:first-child { text-align: left; }
 table.gastab thead th { color: var(--muted); font-weight: 600; font-size: 11.5px; position: static; background: none; }
 table.gastab i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; }
 .gasnote { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
-.row2 { grid-template-columns: 2fr 1fr; margin-bottom: 16px; }
-.row3 { grid-template-columns: 1fr 1fr; margin-bottom: 16px; }
+.row2 { grid-template-columns: 2fr 1fr; margin-bottom: 16px; align-items: stretch; }
+.stack { display: grid; gap: 16px; min-width: 0; align-content: start; }
+/* a série por classe cresce até a altura da coluna da direita */
+.row2 > .stack:first-child { align-content: stretch; }
+.row2 > .stack:first-child > .card { display: flex; flex-direction: column; }
+.row2 > .stack:first-child .chart.tall { flex: 1 1 auto; min-height: 340px; height: auto; }
+.row3 { grid-template-columns: 1fr 1fr; margin-bottom: 16px; align-items: start; }
 @media (max-width: 1250px) { .kpis { grid-template-columns: 1fr 1fr 1fr; } .kpis .hero { grid-column: span 3; } }
 @media (max-width: 960px) { .kpis { grid-template-columns: 1fr 1fr; } .kpis .hero { grid-column: span 2; } .row2, .row3 { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .kpis { grid-template-columns: 1fr; } }
@@ -731,6 +751,7 @@ table.gastab i { display: inline-block; width: 9px; height: 9px; border-radius: 
 
 .chart { position: relative; height: 320px; }
 .chart.tall { height: 380px; }
+.chart.tall.main { height: 440px; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; padding: 0; list-style: none; font-size: 12.5px; color: var(--ink-2); }
 .legend li { display: flex; align-items: center; gap: 6px; }
 .legend i, .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; box-shadow: inset 0 0 0 1px var(--seam); }
@@ -894,10 +915,13 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
   <aside class="filters" id="filters" aria-label="Filtros">
     <div class="fhead"><div class="slice" id="slice" aria-live="polite"></div></div>
     <div class="fbody" id="fBody">
+      <div class="fgroup"><span class="flabel" id="lMeasure">Medida</span><div class="seg" id="fMeasure" role="group" aria-labelledby="lMeasure"></div>
+        <p class="mhint" id="fMeasureHint" aria-live="polite"></p></div>
       <div class="fgroup"><span class="flabel" id="lGas">Gás</span><div class="seg" id="fGas" role="group" aria-labelledby="lGas"></div></div>
       <div class="fgroup"><span class="flabel" id="lPeriod">Período</span><div class="seg" id="fPeriod" role="group" aria-labelledby="lPeriod"></div></div>
       <div class="fgroup"><span class="flabel" id="lBiome">Bioma</span><div class="seg" id="fBiome" role="group" aria-labelledby="lBiome"></div></div>
       <div class="fgroup"><span class="flabel" id="lCover">Cobertura</span><div class="seg" id="fCover" role="group" aria-labelledby="lCover"></div></div>
+      <div class="fgroup"><span class="flabel" id="lRegion">Região</span><div class="seg" id="fRegion" role="group" aria-labelledby="lRegion"></div></div>
       <div class="fgroup"><span class="flabel" id="lUF">UF</span><div class="seg" id="fUF" role="group" aria-labelledby="lUF"></div></div>
     </div>
     <button type="button" class="ftoggle" id="fToggle" aria-expanded="true" aria-controls="fBody">
@@ -905,62 +929,70 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
   </aside>
   <main class="content">
 
-  <p class="kpick" id="kPickNote">Clique num indicador para vê-lo nos gráficos</p>
   <section class="grid kpis" role="radiogroup" aria-label="Medida mostrada nos gráficos">
     <div class="card tile sel" id="tArea" data-m="area"><div class="label">Área queimada</div><div class="value" id="kArea"></div><div class="note" id="kAreaNote"></div><div class="pick"></div></div>
-    <div class="card tile hero sel" id="tEmiss" data-m="emiss"><div class="label" id="kEmissLabel">Emissão</div><div class="value" id="kEmiss"></div><div class="note" id="kEmissNote"></div><div class="unc" id="kEmissUnc"></div><div class="pick"></div></div>
+    <div class="card tile hero sel" id="tEmiss" data-m="emiss"><div class="label" id="kEmissLabel">Emissão</div><div class="value" id="kEmiss"></div><div class="note" id="kEmissNote"></div><div class="unc" id="kEmissUnc"></div><div class="unc" id="kEmissGas"></div><div class="pick"></div></div>
     <div class="card tile sel" id="tInt" data-m="int"><div class="label" id="kIntLabel">Emissão por hectare queimado</div><div class="value" id="kInt"></div><div class="note" id="kIntNote"></div><div class="pick"></div></div>
     <div class="card tile sel" id="tDens" data-m="dens"><div class="label" id="kDensLabel">Emissão por hectare de território</div><div class="value" id="kDens"></div><div class="note" id="kDensNote"></div><div class="pick"></div></div>
     <div class="card tile"><div class="label" id="kLastLabel">Último mês</div><div class="value" id="kLast"></div><div class="note" id="kLastNote"></div></div>
   </section>
 
-  <section class="grid row2">
-    <div class="card">
+  <section class="card" style="margin-bottom:16px">
       <div class="card-head">
         <div><h2 id="tMonthly">Emissões por mês</h2><p class="sub" id="sMonthly"></p></div>
-        <div class="detail"><span class="flabel" id="lGroup">Detalhar por</span>
+        <div class="detail">
+          <span class="flabel" id="lGrain">Eixo</span>
+          <div class="seg small" id="fGrain" role="group" aria-labelledby="lGrain"></div>
+          <span class="flabel" id="lGroup">Detalhar por</span>
           <div class="seg small" id="fGroup" role="group" aria-labelledby="lGroup"></div></div>
       </div>
       <ul class="legend" id="lgMonthly"></ul>
-      <div class="chart tall"><canvas id="cMonthly" role="img" aria-label="Série mensal"></canvas></div>
-    </div>
-    <div class="card">
-      <h2>Composição por gás</h2>
-      <p class="sub">Em massa, quase tudo é CO₂; no efeito sobre o clima (CO₂e, GWP AR5), CH₄ e N₂O ganham peso</p>
-      <div class="gasbars" id="gasBars"></div>
-      <table class="gastab" id="gasTab"></table>
-      <p class="gasnote" id="gasNote"></p>
-      <h2 style="margin-top:22px">Natural × antrópico</h2>
-      <p class="sub" id="sSplit"></p>
-      <div class="split" id="split"></div>
-      <div class="split-legend" id="splitLegend"></div>
-    </div>
-  </section>
-
-  <section class="grid row3">
-    <div class="card">
-      <h2>Total anual <span class="scope-tag" title="Mostra todos os anos; o filtro de período não se aplica">todos os anos</span></h2>
-      <p class="sub" id="sAnnual"></p>
-      <div class="chart"><canvas id="cAnnual" role="img" aria-label="Totais anuais"></canvas></div>
-    </div>
-    <div class="card">
-      <h2>Por classe de cobertura</h2>
-      <p class="sub" id="sClass"></p>
-      <div class="chart"><canvas id="cClass" role="img" aria-label="Totais por classe"></canvas></div>
-    </div>
+      <div class="chart tall main"><canvas id="cMonthly" role="img" aria-label="Série por classe"></canvas></div>
+    <div class="dlrow"><button type="button" class="dlbtn" data-dl="csv" data-chart="cMonthly">Baixar CSV</button><button type="button" class="dlbtn" data-dl="png" data-chart="cMonthly">Baixar PNG</button></div>
   </section>
 
   <section class="card" style="margin-bottom:16px">
-    <h2>Por unidade da federação</h2>
-    <p class="sub" id="sUF"></p>
-    <div class="chart" id="ufBox"><canvas id="cUF" role="img" aria-label="Ranking por UF"></canvas></div>
+    <div class="card-head">
+      <div><h2 id="tRank">Ranking</h2><p class="sub" id="sRank"></p></div>
+      <div class="detail"><span class="flabel" id="lRank">Detalhar por</span>
+        <div class="seg small" id="fRank" role="group" aria-labelledby="lRank"></div></div>
+    </div>
+    <div class="chart" id="rankBox"><canvas id="cRank" role="img" aria-label="Ranking"></canvas></div>
+    <div class="dlrow"><button type="button" class="dlbtn" data-dl="csv" data-chart="cRank">Baixar CSV</button><button type="button" class="dlbtn" data-dl="png" data-chart="cRank">Baixar PNG</button></div>
   </section>
 
+
+
+  <div class="sec-head" id="matrizes">
+    <h2>Matrizes</h2>
+    <p>Escolha o que vai nas linhas e nas colunas. Os valores seguem a medida escolhida nos cartões do topo e todos os filtros;
+      a dimensão que está na tabela não é filtrada, para dar para comparar as partes. O mais escuro é o maior valor.</p>
+  </div>
   <section class="card" style="margin-bottom:16px">
-    <h2>Emissão por hectare queimado: bioma × mês do ano</h2>
-    <p class="sub" id="sSeason"></p>
-    <div class="matrix-wrap"><table class="matrix" id="mxSeason"></table></div>
-    <p class="matrix-note">Mostra em que época do ano o fogo atinge vegetação com mais carbono em cada bioma. Ex.: na Amazônia, a emissão por hectare sobe na estação seca, quando o fogo chega à floresta.</p>
+    <div class="card-head">
+      <div><h2 id="mxAT">Matriz</h2><p class="sub" id="mxAS"></p></div>
+      <div class="detail"><button type="button" class="dlbtn" id="mxAD">Baixar CSV</button></div>
+    </div>
+    <div class="mxctl">
+      <div><span class="flabel" id="mxALR">Linhas</span><div class="seg small" id="mxAR" role="group" aria-labelledby="mxALR"></div></div>
+      <div><span class="flabel" id="mxALC">Colunas</span><div class="seg small" id="mxAC" role="group" aria-labelledby="mxALC"></div></div>
+      <div><span class="flabel" id="mxALH">Sombreamento</span><div class="seg small" id="mxAH" role="group" aria-labelledby="mxALH"></div></div>
+    </div>
+    <div class="matrix-wrap"><table class="matrix" id="mxA"></table></div>
+    <p class="matrix-note" id="mxAN"></p>
+  </section>
+  <section class="card" style="margin-bottom:16px">
+    <div class="card-head">
+      <div><h2 id="mxBT">Matriz</h2><p class="sub" id="mxBS"></p></div>
+      <div class="detail"><button type="button" class="dlbtn" id="mxBD">Baixar CSV</button></div>
+    </div>
+    <div class="mxctl">
+      <div><span class="flabel" id="mxBLR">Linhas</span><div class="seg small" id="mxBR" role="group" aria-labelledby="mxBLR"></div></div>
+      <div><span class="flabel" id="mxBLC">Colunas</span><div class="seg small" id="mxBC" role="group" aria-labelledby="mxBLC"></div></div>
+      <div><span class="flabel" id="mxBLH">Sombreamento</span><div class="seg small" id="mxBH" role="group" aria-labelledby="mxBLH"></div></div>
+    </div>
+    <div class="matrix-wrap"><table class="matrix" id="mxB"></table></div>
+    <p class="matrix-note" id="mxBN"></p>
   </section>
 
   <section class="card" style="margin-bottom:16px" id="extCard" hidden>
@@ -970,28 +1002,7 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
     <ul class="legend" id="lgExt"></ul>
     <div class="chart"><canvas id="cExt" role="img" aria-label="Comparação anual com bases externas"></canvas></div>
     <p class="matrix-note" id="extNote"></p>
-  </section>
-
-  <section class="card" style="margin-bottom:16px">
-    <h2>Mês × ano <span class="scope-tag" title="Colunas são os anos; o filtro de período não se aplica">anos inteiros · ignora o período</span></h2>
-    <p class="sub" id="sMxMonth"></p>
-    <div class="matrix-wrap"><table class="matrix" id="mxMonth"></table></div>
-  </section>
-  <section class="card" style="margin-bottom:16px">
-    <h2><span id="tMxUF">UF × ano</span> <span class="scope-tag" title="Mostra todas as UFs (a selecionada fica sublinhada) e todos os anos">todas as UFs · ignora o período</span></h2>
-    <p class="sub" id="sMxUF"></p>
-    <div class="matrix-wrap"><table class="matrix" id="mxUF"></table></div>
-  </section>
-  <section class="card" style="margin-bottom:16px">
-    <h2><span id="tMxBiome">Bioma × ano</span> <span class="scope-tag" title="Mostra todos os biomas e todos os anos">todos os biomas · ignora o período</span></h2>
-    <p class="sub" id="sMxBiome"></p>
-    <div class="matrix-wrap"><table class="matrix" id="mxBiome"></table></div>
-  </section>
-  <section class="card" style="margin-bottom:16px">
-    <h2><span id="tMxCover">Cobertura × ano</span> <span class="scope-tag" title="Colunas são os anos; o filtro de período não se aplica">anos inteiros · ignora o período</span></h2>
-    <p class="sub" id="sMxCover"></p>
-    <div class="matrix-wrap"><table class="matrix" id="mxCover"></table></div>
-    <p class="matrix-note" id="mxNote"></p>
+    <div class="dlrow"><button type="button" class="dlbtn" data-dl="csv" data-chart="cExt">Baixar CSV</button><button type="button" class="dlbtn" data-dl="png" data-chart="cExt">Baixar PNG</button></div>
   </section>
 
   <details class="card table">
@@ -1009,8 +1020,8 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
     <ul>
       <li>Área queimada mensal do monitor MapBiomas Fogo, cruzada com a cobertura MapBiomas Coleção 11 do mesmo ano
         (meses posteriores ao último ano disponível usam a cobertura mais recente) e com os limites de biomas e UFs do IBGE.</li>
-      <li>Carbono: mapa de estoques (biomassa aérea, madeira morta e serrapilheira) nas classes naturais; médias por bioma
-        nas classes antrópicas. Carbono queimado = carbono × fator de combustão.</li>
+      <li>Carbono: mapa de estoques (biomassa aérea, madeira morta e serrapilheira) nas classes naturais; biomassa aérea média
+        de cada bioma nas classes antrópicas. Carbono queimado = carbono × fator de combustão.</li>
       <li>Biomassa queimada = carbono queimado ÷ 0,47. Emissão = biomassa × fator de emissão de cada gás (g/kg de matéria seca).</li>
       <li>CH₄ e N₂O convertidos em CO₂e pelo GWP AR5 (28 e 265). CO₂e total = CO₂ + CH₄ + N₂O.</li>
       <li>Emissão por hectare queimado = Σ emissão (t) ÷ Σ área queimada (ha) do recorte. Mede a intensidade da queima
@@ -1076,7 +1087,7 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
       <h3>O carbono disponível para queimar depende da vegetação.</h3>
       <p>Nas formações nativas, o carbono vem do mapa de estoques, pixel a pixel: em florestas, consideram-se a madeira morta e a serrapilheira;
         em savanas, parte da biomassa aérea somada a esses resíduos; em campos, toda a biomassa aérea e os resíduos. Em pastagens e agricultura,
-        usa-se o estoque médio de cada bioma. O fator de combustão indica a fração desse carbono efetivamente consumida pelo fogo.</p>
+        usa-se a biomassa aérea média de cada bioma, um valor único por bioma. O fator de combustão indica a fração desse carbono efetivamente consumida pelo fogo.</p>
       <div class="chain"><div class="term"><div class="v">estoque de carbono</div><div class="u">t C/ha</div></div><div class="op">×</div>
         <div class="term"><div class="v">fator de combustão</div><div class="u">fração consumida</div></div><div class="op">=</div>
         <div class="term out"><div class="v">carbono queimado</div><div class="u">t C/ha</div></div></div>
@@ -1149,7 +1160,7 @@ footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
         <div class="mcard"><h4>Vegetação e agropecuária</h4><p>A estimativa cobre a queima de formações nativas, pastagens e lavouras. Áreas urbanas, corpos d'água e áreas não vegetadas não entram.</p></div>
         <div class="mcard"><h4>Estoques de referência</h4><p>Os estoques de carbono das formações nativas têm como referência o mapa de 2019.</p></div>
         <div class="mcard"><h4>Cobertura mais recente</h4><p id="mLastCov"></p></div>
-        <div class="mcard"><h4>Áreas agropecuárias</h4><p>Pastagens e lavouras usam o estoque médio de carbono de cada bioma.</p></div>
+        <div class="mcard"><h4>Áreas agropecuárias</h4><p>Pastagens e lavouras usam a biomassa aérea média de cada bioma, em carbono; madeira morta e serrapilheira não entram.</p></div>
       </div>
     </section>
 
@@ -1215,7 +1226,7 @@ function setValue(el, num, unit) {
 }
 
 // ---------- filtros (botões) ----------
-const S = { measure: 'emiss', gas: 'total', group: 'cover', cover: 'all', period: 'all', biome: 'all', uf: 'all', theme: 'light' };
+const S = { region: 'all', rank: 'cover', tgrain: 'm', measure: 'emiss', gas: 'total', group: 'cover', cover: 'all', period: 'all', biome: 'all', uf: 'all', theme: 'light' };
 const COVER = DATA.cover, NC = COVER.length;
 const coverIdx = {}; COVER.forEach(([name], k) => { coverIdx[name] = k; });
 const OTHER = coverIdx['Outras classes'];
@@ -1249,13 +1260,13 @@ const FOLD = 7;
 const REGIONS = [['Norte', 135, ['AC', 'AM', 'AP', 'PA', 'RO', 'RR', 'TO']],
   ['Nordeste', 30, ['AL', 'BA', 'CE', 'MA', 'PB', 'PE', 'PI', 'RN', 'SE']],
   ['Centro-Oeste', 350, ['DF', 'GO', 'MS', 'MT']], ['Sudeste', 215, ['ES', 'MG', 'RJ', 'SP']], ['Sul', 270, ['PR', 'RS', 'SC']]];
-const UF_COLOR = [], UF_ORDER = [];
+const UF_COLOR = [], UF_ORDER = [], UF_REGION = [];
 DATA.ufs.forEach((u, k) => {
   REGIONS.forEach(([, hue, list], r) => {
     const j = list.indexOf(u.sigla);
     if (j < 0) return;
     const l = list.length > 1 ? 28 + 44 * j / (list.length - 1) : 45;
-    UF_COLOR[k] = 'hsl(' + hue + ' 55% ' + l.toFixed(0) + '%)'; UF_ORDER[k] = r * 100 + j;
+    UF_COLOR[k] = 'hsl(' + hue + ' 55% ' + l.toFixed(0) + '%)'; UF_ORDER[k] = r * 100 + j; UF_REGION[k] = r;
   });
   if (UF_COLOR[k] === undefined) { UF_COLOR[k] = '#9c8f80'; UF_ORDER[k] = 999; }
 });
@@ -1266,6 +1277,8 @@ const DETAIL = {
   n4: { n: () => N4.length, key: i => CLASS_N4[F.c[i]], label: k => N4[k], color: k => N4_COLOR[k], order: k => N4_COVER[k] },
   biome: { n: () => NB, key: i => F.b[i], label: k => BIOMES[k], color: k => biomeColor(k) },
   uf: { n: () => DATA.ufs.length, key: i => F.u[i], label: k => DATA.ufs[k].sigla, color: k => UF_COLOR[k], order: k => UF_ORDER[k] },
+  year: { n: () => YEARS.length, key: i => YEAR_OF[F.m[i]], label: k => YEARS[k], color: k => rampAt(rampColors(), 0.18 + 0.82 * k / Math.max(1, NY - 1)).color, order: k => k },
+  mon: { n: () => 12, key: i => +MONTHS[F.m[i]].slice(5) - 1, label: k => MON[k], color: k => 'hsl(' + ((k * 30 + 200) % 360) + ' 55% 45%)', order: k => k },
 };
 function seg(id, key, items, after) {
   const el = $(id); el.textContent = '';
@@ -1284,11 +1297,13 @@ function seg(id, key, items, after) {
 }
 const ufsByBiome = BIOMES.map(() => new Set());
 for (let i = 0; i < N; i++) ufsByBiome[F.b[i]].add(F.u[i]);
+// região: filtra as UFs da região escolhida (S.region = índice em REGIONS ou 'all')
+const ufIn = u => S.region === 'all' || UF_REGION[u] === +S.region;
 function fillUF() {
   const allowed = S.biome === 'all' ? null : ufsByBiome[+S.biome];
-  if (S.uf !== 'all' && allowed && !allowed.has(+S.uf)) S.uf = 'all';
+  if (S.uf !== 'all' && ((allowed && !allowed.has(+S.uf)) || !ufIn(+S.uf))) S.uf = 'all';
   const items = [['all', 'Todas']];
-  DATA.ufs.forEach((u, i) => { if (!allowed || allowed.has(i)) items.push([String(i), u.sigla, u.nome]); });
+  DATA.ufs.forEach((u, i) => { if ((!allowed || allowed.has(i)) && ufIn(i)) items.push([String(i), u.sigla, u.nome]); });
   seg('fUF', 'uf', items);
 }
 const MEASURE_HINT = {
@@ -1306,16 +1321,25 @@ function paintTiles() {
     if (pk) pk.textContent = on ? '● nos gráficos' : 'ver nos gráficos';
   });
 }
-function setMeasure(v) { if (S.measure === v) return; S.measure = v; paintTiles(); renderAll(); }
+function paintMeasureHint() {
+  const h = $('fMeasureHint'), [f, t] = MEASURE_HINT[S.measure]; h.textContent = '';
+  const b = document.createElement('b'); b.className = 'fx'; b.textContent = f; h.append(b, document.createTextNode(t));
+}
+const MEASURE_OPTS = [['area', 'Área queimada', 'Σ área queimada (ha)'], ['emiss', 'Emissão', 'Σ emissão do gás (t)'],
+  ['int', 'Por ha queimado', 'Σ emissão (t) ÷ Σ área queimada (ha)'], ['dens', 'Por ha de território', 'Σ emissão (t) ÷ Σ área do território (ha)']];
+function buildMeasureSeg() { seg('fMeasure', 'measure', MEASURE_OPTS, () => { paintTiles(); paintMeasureHint(); renderAll(); }); }
+function setMeasure(v) { if (S.measure === v) return; S.measure = v; buildMeasureSeg(); paintTiles(); paintMeasureHint(); renderAll(); }
 Object.entries(MEASURE_TILES).forEach(([v, id]) => {
   const t = $(id); t.setAttribute('role', 'radio'); t.tabIndex = 0;
   t.title = MEASURE_HINT[v][0] + ' — ' + MEASURE_HINT[v][1];
   t.addEventListener('click', () => setMeasure(v));
   t.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setMeasure(v); } });
 });
-paintTiles();
-seg('fGroup', 'group', [['cover', 'Cobertura'], ['n0', 'Nativa × agro', 'Vegetação nativa × agropecuária'],
-  ['n4', 'Classe', 'Classe detalhada (MapBiomas)'], ['biome', 'Bioma'], ['uf', 'UF']]);
+buildMeasureSeg(); paintMeasureHint(); paintTiles();
+seg('fGrain', 'tgrain', [['m', 'Mês'], ['y', 'Ano']]);
+const DETAIL_OPTS = [['n0', 'Nativa × agro', 'Vegetação nativa × agropecuária'], ['cover', 'Cobertura'], ['biome', 'Bioma'], ['uf', 'UF'], ['year', 'Ano'], ['mon', 'Mês', 'Mês do ano (jan a dez)']];
+seg('fRank', 'rank', DETAIL_OPTS);
+seg('fGroup', 'group', DETAIL_OPTS);
 (function () {
   const items = [['all', 'Todas'], ['nat', 'Nativa', 'Vegetação nativa'], ['ant', 'Agropec.', 'Agropecuária']]
     .concat(COVER.map(([name, color], k) => ['g' + k, DATA.cover_short[name] || name, name, color]));
@@ -1329,6 +1353,8 @@ seg('fPeriod', 'period', [['all', 'Tudo'], ['l12', '12m', 'Últimos 12 meses']].
   ['y' + y, y + (y === LAST.slice(0, 4) && LAST_YEAR_PARTIAL ? '*' : ''),
    y === LAST.slice(0, 4) && LAST_YEAR_PARTIAL ? y + ' até ' + MON[+LAST.slice(5) - 1] : ''])));
 seg('fBiome', 'biome', [['all', 'Todos']].concat(BIOMES.map((b, i) => [String(i), b])), () => { fillUF(); renderAll(); });
+seg('fRegion', 'region', [['all', 'Todas']].concat(REGIONS.map(([n, hue], r) => [String(r), n, 'Região ' + n, 'hsl(' + hue + ' 55% 45%)'])),
+  () => { fillUF(); renderAll(); });
 fillUF();
 
 // área do território (ha) por bioma × UF (o CSV vem em km²; 1 km² = 100 ha)
@@ -1337,7 +1363,7 @@ DATA.territory.forEach(([b, u, km2]) => { TERR[b][u] = km2 * 100; });
 function territory(bSel, uSel) {
   let t = 0;
   for (let b = 0; b < NB; b++) { if (bSel >= 0 && b !== bSel) continue;
-    for (let u = 0; u < DATA.ufs.length; u++) { if (uSel >= 0 && u !== uSel) continue; t += TERR[b][u]; } }
+    for (let u = 0; u < DATA.ufs.length; u++) { if ((uSel >= 0 && u !== uSel) || (uSel < 0 && !ufIn(u))) continue; t += TERR[b][u]; } }
   return t;
 }
 
@@ -1375,6 +1401,7 @@ function aggregate() {
     const b = F.b[i], u = F.u[i];
     if (bSel >= 0 && b !== bSel) continue;
     if (uSel >= 0 && u !== uSel) continue;
+    if (!ufIn(u)) continue;
     if (!coverPass(F.c[i])) continue;
     const m = F.m[i], a = F.a[i], c2 = F.co2[i], c4 = F.ch4[i], n2 = F.n2o[i];
     const e = g === 'total' ? c2 + c4 + n2 : g === 'co2' ? c2 : g === 'ch4' ? c4 : n2;
@@ -1418,7 +1445,7 @@ function measureName() {
 }
 function sliceText() {
   const b = S.biome === 'all' ? 'Brasil' : BIOMES[+S.biome];
-  const u = S.uf === 'all' ? '' : ' · ' + DATA.ufs[+S.uf].sigla;
+  const u = S.uf !== 'all' ? ' · ' + DATA.ufs[+S.uf].sigla : S.region !== 'all' ? ' · ' + REGIONS[+S.region][0] : '';
   const [m0, m1] = monthRange();
   const c = coverLabel();
   return b + u + (c ? ' · ' + c : '') + ' · ' + mLabel(MONTHS[m0]) + ' a ' + mLabel(MONTHS[m1]);
@@ -1469,24 +1496,58 @@ const barLabels = {
         tops[di + ':' + i] = y1;
       });
     });
-    if (ds.length !== 1) { ctx.restore(); return; }
+    const stack = !!ch.$stackTotals && !hor && ds.length > 0;
+    if (stack && ch.$err) {
+      const sc = ch.scales.y; ctx.strokeStyle = css('--ink'); ctx.lineWidth = 1.2;
+      ch.getDatasetMeta(0).data.forEach((bar, i) => {
+        const r = ch.$err[i]; if (!r) return;
+        const y0 = sc.getPixelForValue(r[0]), y1 = sc.getPixelForValue(r[1]), cw = Math.min(8, bar.width / 2);
+        ctx.beginPath(); ctx.moveTo(bar.x, y0); ctx.lineTo(bar.x, y1);
+        ctx.moveTo(bar.x - cw / 2, y0); ctx.lineTo(bar.x + cw / 2, y0);
+        ctx.moveTo(bar.x - cw / 2, y1); ctx.lineTo(bar.x + cw / 2, y1); ctx.stroke();
+        tops['0:' + i] = y1;
+      });
+    }
+    if (!stack && ds.length !== 1) { ctx.restore(); return; }
     ctx.font = '600 11px ' + getComputedStyle(document.body).fontFamily;
     ctx.fillStyle = css('--ink-2');
     const slot = hor ? 0 : (area.right - area.left) / Math.max(1, ch.data.labels.length);
+    const vals = stack ? ch.data.labels.map((_, i) => ds.reduce((s, d) => s + (d.data[i] || 0), 0)) : ds[0].data;
+    const vmax = Math.max(0, ...vals.filter(v => v > 0));
+    // barras estreitas: rótulo na vertical; estreitíssimas: só os picos (máximos locais), sem sobreposição
+    const wide = vals.every(v => !(v > 0) || ctx.measureText(shortVal(v)).width <= slot - 4);
+    const mode = hor ? 'h' : wide ? 'fit' : slot >= 12 ? 'rot' : 'peak';
+    const win = Math.max(1, Math.ceil(34 / Math.max(slot, 1)));
+    const placed = [];
     ch.getDatasetMeta(0).data.forEach((bar, i) => {
-      const v = ds[0].data[i];
+      const v = vals[i];
       if (v === null || v === undefined || !(v > 0)) return;
-      const t = shortVal(v), w = ctx.measureText(t).width;
-      if (hor) {
+      const sh = ds[0].share ? ds[0].share[i] : null;
+      const t = shortVal(v) + (mode === 'h' && sh !== null ? ' · ' + (sh < 0.01 ? '<1' : nf(0).format(sh * 100)) + '%' : ''), w = ctx.measureText(t).width;
+      if (mode === 'h') {
         if (bar.height < 10) return;
         ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.fillText(t, Math.min(bar.x + 5, area.right + 56 - w), bar.y);
-      } else {
-        if (w > slot - 4) return;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-        const top = tops['0:' + i];
-        ctx.fillText(t, bar.x, (top !== undefined ? Math.min(top, bar.y) : bar.y) - 3);
+        ctx.fillText(t, Math.min(bar.x + 5, area.right + 92 - w), bar.y);
+        return;
       }
+      const by = stack ? ch.scales.y.getPixelForValue(v) : bar.y;
+      const top = tops['0:' + i], y0 = (top !== undefined ? Math.min(top, by) : by) - 3;
+      if (mode === 'rot') {
+        ctx.save(); ctx.translate(bar.x, y0); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        if (y0 - w < area.top - 12) { ctx.textAlign = 'right'; ctx.fillStyle = css('--on-accent'); ctx.fillText(t, -6, 0); }
+        else ctx.fillText(t, 0, 0);
+        ctx.restore();
+        return;
+      }
+      if (mode === 'peak') {
+        if (v < 0.12 * vmax) return;
+        for (let j = Math.max(0, i - win); j <= Math.min(vals.length - 1, i + win); j++) if (vals[j] > v) return;
+        const x0 = bar.x - w / 2;
+        if (placed.some(([a, b]) => x0 < b + 4 && x0 + w > a - 4)) return;
+        placed.push([x0, x0 + w]);
+      }
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText(t, bar.x, y0);
     });
     ctx.restore();
   },
@@ -1497,7 +1558,7 @@ function makeBar(canvas, horizontal) {
     data: { labels: [], datasets: [] },
     plugins: [barLabels],
     options: {
-      layout: { padding: horizontal ? { right: 58 } : { top: 16 } },
+      layout: { padding: horizontal ? { right: 96 } : { top: 16, right: 18 } },
       indexAxis: horizontal ? 'y' : 'x',
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false, axis: horizontal ? 'y' : 'x' },
@@ -1517,9 +1578,7 @@ function makeBar(canvas, horizontal) {
   });
 }
 const cMonthly = makeBar($('cMonthly'), false);
-const cAnnual = makeBar($('cAnnual'), false);
-const cClass = makeBar($('cClass'), true);
-const cUF = makeBar($('cUF'), true);
+const cRank = makeBar($('cRank'), true);
 
 // barra: <= 24px, ponta arredondada (4px) e base reta; segmentos empilhados separados por 2px da cor do fundo
 function barStyle(color, opts) {
@@ -1543,12 +1602,32 @@ function monthSum(R, m) {
   return [a, e];
 }
 
+// grupos de tempo do eixo: cada mês do período, ou cada ano (com os meses do período que caem nele)
+const effGrain = () => S.group === 'year' ? 'moy' : S.group === 'mon' ? 'y' : S.tgrain;
+function timeBuckets(R) {
+  const out = [], gr = effGrain();
+  if (gr === 'moy') {
+    MON.forEach((mo, k) => { const ms = []; for (let m = R.m0; m <= R.m1; m++) if (+MONTHS[m].slice(5) - 1 === k) ms.push(m);
+      if (ms.length) out.push({ lab: mo, long: mo + ' (somando os anos do período)', ms }); });
+  } else if (gr === 'y') {
+    YEARS.forEach((y, j) => {
+      const ms = []; for (let m = R.m0; m <= R.m1; m++) if (YEAR_OF[m] === j) ms.push(m);
+      if (!ms.length) return;
+      const part = ms.length < 12, mo = m => MON[+MONTHS[m].slice(5) - 1];
+      out.push({ lab: y + (part ? '*' : ''), long: part ? y + ' (' + mo(ms[0]) + ' a ' + mo(ms[ms.length - 1]) + ')' : y, ms, part });
+    });
+  } else for (let m = R.m0; m <= R.m1; m++) out.push({ lab: mLabel(MONTHS[m]), long: mLong(MONTHS[m]), ms: [m] });
+  return out;
+}
+const grainWord = () => ({ y: 'ano', m: 'mês', moy: 'mês do ano' })[effGrain()];
 function renderMonthly(R) {
-  const ms = S.measure, D = DETAIL[S.group], nD = R.nD;
-  const idx = []; for (let m = R.m0; m <= R.m1; m++) idx.push(m);
-  cMonthly.data.labels = idx.map(m => mLabel(MONTHS[m]));
+  const ms = S.measure, D = DETAIL[S.group], nD = R.nD, TB = timeBuckets(R);
+  const fixedAxis = S.group === 'year' || S.group === 'mon';  // o eixo já é definido pelo detalhamento
+  $('fGrain').style.display = $('lGrain').style.display = fixedAxis ? 'none' : '';
+  cMonthly.data.labels = TB.map(t => t.lab);
+  const sumK = (arr, t, k) => t.ms.reduce((s, m) => s + arr[m * nD + k], 0);
   const tot = new Float64Array(nD);
-  idx.forEach(m => { for (let k = 0; k < nD; k++) tot[k] += R.dA[m * nD + k] + R.dE[m * nD + k]; });
+  TB.forEach(t => { for (let k = 0; k < nD; k++) tot[k] += sumK(R.dA, t, k) + sumK(R.dE, t, k); });
   let keys = [...Array(nD).keys()].filter(k => tot[k] > 0);
   let rest = [];
   if (D.order) keys.sort((x, y) => (D.order(x) - D.order(y)) || (tot[y] - tot[x]));
@@ -1558,24 +1637,38 @@ function renderMonthly(R) {
   }
   const pal = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6', '--s7'];
   const colorOf = (k, r) => D.color ? D.color(k) : css(pal[r]) || css('--accent');
-  const series = keys.map((k, r) => ({ label: D.label(k), color: colorOf(k, r),
-    A: m => R.dA[m * nD + k], E: m => R.dE[m * nD + k] }));
+  const series = keys.map((k, r) => ({ label: D.label(k), color: colorOf(k, r), A: t => sumK(R.dA, t, k), E: t => sumK(R.dE, t, k) }));
   if (rest.length) series.push({ label: D.fold + ' (' + rest.length + ')', color: '#9c8f80',
-    A: m => rest.reduce((s, k) => s + R.dA[m * nD + k], 0), E: m => rest.reduce((s, k) => s + R.dE[m * nD + k], 0) });
-  const seam = !!D.color || true;
-  const aTot = {}; idx.forEach(m => { let s = 0; for (let k = 0; k < nD; k++) s += R.dA[m * nD + k]; aTot[m] = s; });
+    A: t => rest.reduce((s, k) => s + sumK(R.dA, t, k), 0), E: t => rest.reduce((s, k) => s + sumK(R.dE, t, k), 0) });
+  const aTot = TB.map(t => { let s = 0; for (let k = 0; k < nD; k++) s += sumK(R.dA, t, k); return s; });
   cMonthly.data.datasets = series.map(sr => ({
-    label: sr.label, data: idx.map(m => measureOf(sr.A(m), sr.E(m), R.T, aTot[m])),
-    ...barStyle(sr.color, { seam, flat: true }),
+    label: sr.label, data: TB.map((t, i) => measureOf(sr.A(t), sr.E(t), R.T, aTot[i])),
+    ...barStyle(sr.color, { seam: true, flat: true }),
   }));
   cMonthly.options.scales.x.stacked = cMonthly.options.scales.y.stacked = true;
+  // total do recorte em cima de cada pilha; faixa de incerteza (95%) quando há até 36 barras
+  const showUnc = (ms === 'emiss' || ms === 'dens') && TB.length <= 36;
+  const fU = ms === 'dens' ? (R.T > 0 ? 1 / R.T : 0) : 1;
+  cMonthly.$stackTotals = true;
+  cMonthly.$err = showUnc ? TB.map(t => { let lo = 0, hi = 0, e = 0;
+    t.ms.forEach(m => { lo += R.mLo[m]; hi += R.mHi[m]; e += monthSum(R, m)[1]; }); return e > 0 ? [lo * fU, hi * fU] : null; }) : null;
+  const his = (cMonthly.$err || []).filter(Boolean).map(r => r[1]);
+  cMonthly.options.scales.y.suggestedMax = his.length ? Math.max(...his) * 1.1 : undefined;
+  cMonthly.options.plugins.tooltip.callbacks.afterFooter = items => {
+    const r = cMonthly.$err && cMonthly.$err[items[0].dataIndex];
+    return r ? 'Faixa de incerteza (95%): ' + fullVal(r[0]) + ' a ' + fullVal(r[1]) : '';
+  };
   legend($('lgMonthly'), series.map(sr => [sr.label, sr.color]));
   const how = { cover: 'cobertura do solo (cores MapBiomas)', n0: 'vegetação nativa × agropecuária',
-    n4: 'classe detalhada (cores MapBiomas)', biome: 'bioma',
+    n4: 'classe detalhada (cores MapBiomas)', biome: 'bioma', year: 'ano (do mais claro, 2019, ao mais escuro)',
+    mon: 'mês do ano',
     uf: 'UF (tons por região: Norte verde, Nordeste laranja, Centro-Oeste rosa, Sudeste azul, Sul roxo)' }[S.group];
   $('sMonthly').textContent = measureName() + ' (' + measureUnit() + '), empilhado por ' + how
-    + (S.measure === 'int' ? ' · cada parte = sua emissão ÷ área queimada total do mês' : '');
-  cMonthly.options.plugins.tooltip.callbacks.title = items => mLong(MONTHS[idx[items[0].dataIndex]]);
+    + (S.measure === 'int' ? ' · cada parte = sua emissão ÷ área queimada total do ' + grainWord() : '')
+    + ' · número em cima: total do recorte' + (showUnc ? ' · traço: faixa de incerteza (95%)'
+      : (ms === 'emiss' || ms === 'dens') ? ' · faixa de incerteza aparece com até 36 barras' : '')
+    + (TB.some(t => t.part) ? ' · * ano incompleto no período' : '');
+  cMonthly.options.plugins.tooltip.callbacks.title = items => TB[items[0].dataIndex].long;
   cMonthly.options.plugins.tooltip.callbacks.footer = items => {
     if (items.length < 2) return '';
     const t = items.reduce((s, it) => s + (it.parsed.y || 0), 0);
@@ -1583,35 +1676,10 @@ function renderMonthly(R) {
   };
   cMonthly.options.plugins.tooltip.itemSort = (x, y) => (y.parsed.y || 0) - (x.parsed.y || 0);
   cMonthly.options.plugins.tooltip.filter = it => (it.parsed.y || 0) > 0;
-  $('tMonthly').textContent = ms === 'area' ? 'Área queimada por mês' : ms === 'dens' ? 'Emissão por hectare de território, por mês'
-    : ms === 'int' ? 'Emissão por hectare queimado, por mês' : 'Emissões por mês';
+  const per = (ms === 'int' || ms === 'dens' ? ', por ' : ' por ') + grainWord();
+  $('tMonthly').textContent = (ms === 'area' ? 'Área queimada' : ms === 'dens' ? 'Emissão por hectare de território'
+    : ms === 'int' ? 'Emissão por hectare queimado' : 'Emissões') + per;
   themeChart(cMonthly); cMonthly.update();
-}
-
-function renderAnnual(R) {
-  const bSel = S.biome === 'all' ? -1 : +S.biome;
-  const showUnc = S.measure === 'emiss' || S.measure === 'dens';
-  const err = [];
-  const vals = YEARS.map(y => {
-    let a = 0, e = 0, lo = 0, hi = 0;
-    MONTHS.forEach((m, i) => { if (m.startsWith(y)) { const [ma, me] = monthSum(R, i); a += ma; e += me; lo += R.mLo[i]; hi += R.mHi[i]; } });
-    const f = S.measure === 'dens' ? (R.T > 0 ? 1 / R.T : 0) : 1;
-    err.push(showUnc && e > 0 ? [lo * f, hi * f] : null);
-    return measureOf(a, e, R.T);
-  });
-  cAnnual.data.labels = YEARS.map(y => y === LAST.slice(0, 4) && LAST_YEAR_PARTIAL ? y + '*' : y);
-  cAnnual.data.datasets = [{ label: measureName(), data: vals, err: showUnc ? err : null,
-    ...barStyle(bSel >= 0 ? biomeColor(bSel) : css('--accent')) }];
-  const his = err.filter(Boolean).map(r => r[1]);
-  cAnnual.options.scales.y.suggestedMax = showUnc && his.length ? Math.max(...his) * 1.1 : undefined;
-  cAnnual.options.plugins.tooltip.callbacks.afterLabel = c => {
-    const r = err[c.dataIndex]; return showUnc && r ? ' faixa (95%): ' + fullVal(r[0]) + ' a ' + fullVal(r[1]) : '';
-  };
-  cAnnual.options.scales.x.stacked = cAnnual.options.scales.y.stacked = false;
-  $('sAnnual').textContent = measureName() + ' (' + measureUnit() + '), todos os anos'
-    + (showUnc ? ' · traço: faixa de incerteza (95%)' : '')
-    + (LAST_YEAR_PARTIAL ? ' · *' + LAST.slice(0, 4) + ' até ' + MON[+LAST.slice(5) - 1] : '');
-  themeChart(cAnnual); cAnnual.update();
 }
 
 function renderRanked(chart, labels, A, E, T, subEl, what, note, colorOf) {
@@ -1619,24 +1687,61 @@ function renderRanked(chart, labels, A, E, T, subEl, what, note, colorOf) {
     .filter(r => r.a > 0 && r.v !== null).sort((x, y) => y.v - x.v);
   chart.data.labels = rows.map(r => r.l);
   chart.data.datasets = [{ label: measureName(), data: rows.map(r => r.v), ...barStyle(css('--accent')) }];
+  if (S.measure === 'emiss' || S.measure === 'area') {
+    const tot = rows.reduce((s, r) => s + r.v, 0); chart.data.datasets[0].share = rows.map(r => tot > 0 ? r.v / tot : 0);
+  }
   if (colorOf) Object.assign(chart.data.datasets[0], {
     backgroundColor: rows.map(r => colorOf(r.l)), hoverBackgroundColor: rows.map(r => colorOf(r.l)),
     borderColor: css('--seam'), borderWidth: 1, borderSkipped: false });
   subEl.textContent = measureName() + ' (' + measureUnit() + ') ' + what + (S.measure === 'dens' && note ? ' · ' + note : '')
+    + (S.measure === 'emiss' || S.measure === 'area' ? ' · % = parte de cada grupo no total do recorte' : '')
     + (S.measure === 'int' ? ' · emissão ÷ área queimada de cada linha' : '');
   themeChart(chart); chart.update();
   return rows.length;
 }
-function renderClass(R) {
-  const labels = Object.keys(R.cA);
-  renderRanked(cClass, labels, labels.map(k => R.cA[k]), labels.map(k => R.cE[k]), labels.map(() => R.T), $('sClass'),
-    'por classe', 'contribuição de cada classe para a emissão por ha de território do recorte',
-    l => coverColor(coverIdx[l] ?? OTHER));
+function sumBy(dim) {
+  const [m0, m1] = monthRange();
+  const bSel = S.biome === 'all' ? -1 : +S.biome, uSel = S.uf === 'all' ? -1 : +S.uf, g = S.gas;
+  const n = dim === 'uf' ? NU : dim === 'biome' ? NB : dim === 'n4' ? N4.length : dim === 'n0' ? 2 : dim === 'year' ? NY : dim === 'mon' ? 12 : NC;
+  const A = new Float64Array(n), E = new Float64Array(n);
+  for (let i = 0; i < N; i++) {
+    const m = F.m[i]; if (m < m0 || m > m1) continue;
+    const b = F.b[i], u = F.u[i], c = F.c[i];
+    if (dim !== 'biome' && bSel >= 0 && b !== bSel) continue;
+    if (dim !== 'uf' && uSel >= 0 && u !== uSel) continue;
+    if (!ufIn(u)) continue;
+    if (!coverPass(c)) continue;
+    const k = dim === 'uf' ? u : dim === 'biome' ? b : dim === 'n4' ? CLASS_N4[c] : dim === 'n0' ? (IS_NAT[c] ? 0 : 1)
+      : dim === 'year' ? YEAR_OF[m] : dim === 'mon' ? +MONTHS[m].slice(5) - 1 : CLASS_COVER[c];
+    A[k] += F.a[i]; E[k] += g === 'total' ? F.co2[i] + F.ch4[i] + F.n2o[i] : F[g][i];
+  }
+  return { A, E, n };
 }
-function renderUF(R) {
-  const n = renderRanked(cUF, DATA.ufs.map(u => u.sigla), Array.from(R.uA), Array.from(R.uE), R.uT, $('sUF'), 'por UF',
-    'emissão de cada UF ÷ área da UF' + (S.biome === 'all' ? '' : ' no bioma'));
-  $('ufBox').style.height = Math.max(140, n * 24 + 40) + 'px';
+const DIM_INFO = {
+  cover: { name: 'cobertura', label: k => COVER[k][0], short: k => DATA.cover_short[COVER[k][0]] || COVER[k][0], color: k => coverColor(k) },
+  n4: { name: 'classe', label: k => N4[k], short: k => N4[k], color: k => N4_COLOR[k] },
+  biome: { name: 'bioma', label: k => BIOMES[k], short: k => BIOMES[k], color: k => biomeColor(k) },
+  uf: { name: 'UF', label: k => DATA.ufs[k].sigla, short: k => DATA.ufs[k].sigla, full: k => DATA.ufs[k].nome, color: k => UF_COLOR[k] },
+  n0: { name: 'tipo', label: k => ['Vegetação nativa', 'Agropecuária'][k], short: k => ['Nativa', 'Agropecuária'][k], color: k => css(k === 0 ? '--nat' : '--ant') },
+  year: { name: 'ano', time: true, label: k => YEARS[k], short: k => YEARS[k] + (YEARS[k] === LAST.slice(0, 4) && LAST_YEAR_PARTIAL ? '*' : ''), color: k => rampAt(rampColors(), 0.18 + 0.82 * k / Math.max(1, NY - 1)).color },
+  mon: { name: 'mês do ano', time: true, label: k => MON[k], short: k => MON[k], color: k => 'hsl(' + ((k * 30 + 200) % 360) + ' 55% 45%)' },
+};
+function renderRank(R) {
+  const dim = S.rank, D = DIM_INFO[dim], X = sumBy(dim);
+  const bSel = S.biome === 'all' ? -1 : +S.biome, uSel = S.uf === 'all' ? -1 : +S.uf;
+  const keys = [...Array(X.n).keys()];
+  const T = keys.map(k => dim === 'uf' ? territory(bSel, k) : dim === 'biome' ? territory(k, uSel) : R.T);
+  const lab = keys.map(k => D.label(k)), colorOf = {}; keys.forEach(k => { colorOf[lab[k]] = D.color(k); });
+  const note = dim === 'uf' ? 'emissão de cada UF ÷ área da UF' + (bSel >= 0 ? ' no bioma' : '')
+    : dim === 'biome' ? 'emissão de cada bioma ÷ área do bioma' + (uSel >= 0 ? ' na UF' : '')
+      : 'contribuição de cada ' + D.name + ' para a emissão por ha de território do recorte';
+  const n = renderRanked(cRank, lab, Array.from(X.A), Array.from(X.E), T, $('sRank'), 'por ' + D.name, note, l => colorOf[l]);
+  const full = cRank.data.labels.slice(), idx = full.map(l => lab.indexOf(l));
+  cRank.data.labels = idx.map(k => D.short(k));
+  cRank.options.plugins.tooltip.callbacks.title = items => { const k = idx[items[0].dataIndex]; return D.full ? D.full(k) : D.label(k); };
+  cRank.update();
+  $('tRank').textContent = 'Ranking por ' + D.name;
+  $('rankBox').style.height = Math.max(160, n * 24 + 40) + 'px';
 }
 
 function renderKPIs(R) {
@@ -1649,6 +1754,17 @@ function renderKPIs(R) {
   if (R.E > 0) {
     const b = document.createElement('b'); b.textContent = fmtT(R.Elo).join(' ') + ' a ' + fmtT(R.Ehi).join(' ');
     u.append(document.createTextNode('faixa de incerteza (95%): '), b);
+  }
+  const gt = R.gas[0] + R.gas[1] + R.gas[2], gp = v => gt > 0 ? nf(v / gt * 100 < 10 ? 1 : 0).format(v / gt * 100) + '%' : '—';
+  const gl = $('kEmissGas'); gl.textContent = '';
+  if (gt > 0) {
+    if (S.gas === 'total') [['CO₂', 0], ['CH₄', 1], ['N₂O', 2]].forEach(([n, j], k) => {
+      if (k) gl.appendChild(document.createTextNode(' · '));
+      const b = document.createElement('b'); b.textContent = gp(R.gas[j]); gl.append(document.createTextNode(n + ' '), b); });
+    else { const b = document.createElement('b'); b.textContent = gp(R.gas[{ co2: 0, ch4: 1, n2o: 2 }[S.gas]]);
+      gl.append(document.createTextNode(GAS[S.gas].name + ' = '), b); }
+    gl.appendChild(document.createTextNode(S.gas === 'total' ? ' do CO₂e' : ' do CO₂e total'));
+    gl.title = 'Participação de cada gás no CO₂e (GWP AR5). Em massa, CH₄ e N₂O são cerca de 0,2%.';
   }
   $('kIntLabel').textContent = 'Emissão por hectare queimado';
   const tu = S.gas === 'co2' ? 't CO₂' : 't CO₂e';
@@ -1675,72 +1791,9 @@ function renderKPIs(R) {
   } else note.textContent = 'sem base de comparação';
 }
 
-function renderSide(R) {
-  const gwp = DATA.method.gwp;
-  const co2e = R.gas, mass = [R.gas[0], R.gas[1] / gwp.CH4, R.gas[2] / gwp.N2O];
-  const names = ['CO₂', 'CH₄', 'N₂O'], cols = ['--g-co2', '--g-ch4', '--g-n2o'].map(css);
-  const tE = co2e[0] + co2e[1] + co2e[2], tM = mass[0] + mass[1] + mass[2];
-  const bars = $('gasBars'); bars.textContent = '';
-  [['em massa', mass, tM], ['em CO₂e', co2e, tE]].forEach(([lab, v, t]) => {
-    const row = document.createElement('div'); row.className = 'gasbar';
-    const l = document.createElement('span'); l.textContent = lab;
-    const tr = document.createElement('div'); tr.className = 't';
-    v.forEach((x, j) => { const sp = document.createElement('span'); sp.style.flex = String(t > 0 ? x / t : 0); sp.style.background = cols[j];
-      sp.title = names[j] + ' ' + lab + ': ' + nf(2).format(t > 0 ? x / t * 100 : 0) + '%'; tr.appendChild(sp); });
-    row.append(l, tr); bars.appendChild(row);
-  });
-  const fm = t => { const a = Math.abs(t); return a >= 1e6 ? nf(a >= 1e8 ? 0 : 1).format(t / 1e6) + ' mi t' : a >= 1e3 ? nf(a >= 1e5 ? 0 : 1).format(t / 1e3) + ' mil t' : nf(0).format(t) + ' t'; };
-  const tb = $('gasTab'); tb.textContent = '';
-  const hr = tb.createTHead().insertRow();
-  ['Gás', 'Massa', '× GWP', 'CO₂e', '% CO₂e'].forEach(h => { const th = document.createElement('th'); th.textContent = h; th.scope = 'col'; hr.appendChild(th); });
-  const body = tb.createTBody();
-  names.forEach((n, j) => {
-    const tr = body.insertRow();
-    const c0 = tr.insertCell(); const sw = document.createElement('i'); sw.style.background = cols[j]; c0.append(sw, document.createTextNode(n));
-    tr.insertCell().textContent = fm(mass[j]);
-    tr.insertCell().textContent = j === 0 ? '1' : String(j === 1 ? gwp.CH4 : gwp.N2O);
-    tr.insertCell().textContent = fm(co2e[j]);
-    tr.insertCell().textContent = tE > 0 ? nf(1).format(co2e[j] / tE * 100) + '%' : '—';
-  });
-  const nonCO2 = tE > 0 ? (co2e[1] + co2e[2]) / tE * 100 : 0;
-  $('gasNote').textContent = tE > 0 ? 'CH₄ e N₂O são ' + nf(2).format((mass[1] + mass[2]) / tM * 100) + '% da massa emitida, mas '
-    + nf(1).format(nonCO2) + '% do efeito (CO₂e). A proporção varia com a vegetação: florestas emitem mais CH₄ por kg queimado.' : '';
-
-  const useArea = S.measure === 'area';
-  const nv = useArea ? R.nat.A : R.nat.E, av = useArea ? R.ant.A : R.ant.E, t = nv + av;
-  $('sSplit').textContent = (useArea ? 'Área queimada' : 'Emissão de ' + GAS[S.gas].name) + ' por tipo de cobertura';
-  const parts = [['Vegetação nativa', nv, css('--nat')], ['Agropecuária', av, css('--ant')]];
-  const split = $('split'); split.textContent = '';
-  parts.forEach(([n, v, c]) => { if (v > 0) { const s = document.createElement('span'); s.style.flex = String(v); s.style.background = c; s.title = n; split.appendChild(s); } });
-  const lg = $('splitLegend'); lg.textContent = '';
-  parts.forEach(([n, v, c]) => {
-    const d = document.createElement('span'); const sw = document.createElement('i'); sw.className = 'swatch'; sw.style.background = c;
-    const b = document.createElement('b'); b.textContent = t > 0 ? nf(0).format(v / t * 100) + '%' : '—';
-    d.append(sw, document.createTextNode(n + ' '), b); lg.appendChild(d);
-  });
-}
-
 // ---------- matrizes (linhas × ano) ----------
 const NY = YEARS.length, NU = DATA.ufs.length;
 const YEAR_OF = MONTHS.map(m => YEARS.indexOf(m.slice(0, 4)));
-function aggregateYears() {
-  // ignora o período (colunas = anos); respeita bioma, UF e gás
-  const bSel = S.biome === 'all' ? -1 : +S.biome, uSel = S.uf === 'all' ? -1 : +S.uf, g = S.gas;
-  const Z = n => ({ A: new Float64Array(n * NY), E: new Float64Array(n * NY) });
-  const M = { uf: Z(NU), biome: Z(NB), cover: Z(NC) };
-  for (let i = 0; i < N; i++) {
-    const b = F.b[i], u = F.u[i];
-    const inB = bSel < 0 || b === bSel, inU = uSel < 0 || u === uSel;
-    if (!inB || !coverPass(F.c[i])) continue;  // todas as matrizes respeitam bioma e cobertura
-    const y = YEAR_OF[F.m[i]], a = F.a[i];
-    const e = g === 'total' ? F.co2[i] + F.ch4[i] + F.n2o[i] : F[g][i];
-    M.uf.A[u * NY + y] += a; M.uf.E[u * NY + y] += e;   // linhas de UF: todas as UFs do bioma
-    if (!inU) continue;
-    M.biome.A[b * NY + y] += a; M.biome.E[b * NY + y] += e;
-    const k = CLASS_COVER[F.c[i]]; M.cover.A[k * NY + y] += a; M.cover.E[k * NY + y] += e;
-  }
-  return M;
-}
 function rampColors() { return css('--ramp').split(',').map(x => x.trim()); }
 function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
 function rampAt(stops, t) {
@@ -1761,84 +1814,6 @@ function matrixUnit() {
     : ms === 'int' ? g.unit + ' por ha queimado' : g.unit + ' por ha de território';
 }
 // rows: [{label, A[], E[], T, selected}] ; totT = território do total
-function renderMatrix(id, head, rows, totT) {
-  const tbl = $(id); tbl.textContent = '';
-  const stops = rampColors(), flip = +css('--ramp-ink-flip');
-  const vals = rows.map(r => YEARS.map((_, y) => measureOf(r.A[y], r.E[y], r.T)));
-  const max = Math.max(0, ...vals.flat().filter(v => v !== null));
-  const thead = tbl.createTHead().insertRow();
-  [head, ...YEARS.map(y => y === LAST.slice(0, 4) && LAST_YEAR_PARTIAL ? y + '*' : y), 'Total'].forEach(h => {
-    const th = document.createElement('th'); th.scope = 'col'; th.textContent = h; thead.appendChild(th); });
-  const tb = tbl.createTBody();
-  rows.forEach((r, ri) => {
-    const tr = tb.insertRow(); if (r.selected) tr.className = 'sel';
-    const th = document.createElement('th'); th.scope = 'row'; th.textContent = r.label; if (r.title) th.title = r.title; tr.appendChild(th);
-    vals[ri].forEach(v => {
-      const td = tr.insertCell(); td.textContent = cellText(v);
-      if (v > 0 && max > 0) {
-        const c = rampAt(stops, v / max); td.style.background = c.color; td.className = 'v';
-        if (c.step >= flip) td.style.color = '#fbf8f2';
-      }
-    });
-    let A = 0, E = 0; YEARS.forEach((_, y) => { A += r.A[y]; E += r.E[y]; });
-    const td = tr.insertCell(); td.className = 'tot'; td.textContent = cellText(measureOf(A, E, r.T));
-  });
-  const tf = tbl.createTFoot().insertRow();
-  const th = document.createElement('th'); th.scope = 'row'; th.textContent = 'Total'; tf.appendChild(th);
-  let GA = 0, GE = 0;
-  YEARS.forEach((_, y) => {
-    let A = 0, E = 0; rows.forEach(r => { A += r.A[y]; E += r.E[y]; }); GA += A; GE += E;
-    tf.insertCell().textContent = cellText(measureOf(A, E, totT));
-  });
-  tf.insertCell().textContent = cellText(measureOf(GA, GE, totT));
-}
-function renderMonthMatrix(R) {
-  const rows = MON.map((mo, k) => {
-    const A = new Float64Array(NY), E = new Float64Array(NY);
-    MONTHS.forEach((ym, i) => { if (+ym.slice(5) - 1 !== k) return; const [a, e] = monthSum(R, i); A[YEAR_OF[i]] = a; E[YEAR_OF[i]] = e; });
-    return { label: mo, A, E, T: R.T };
-  });
-  renderMatrix('mxMonth', 'Mês', rows, R.T);
-  $('sMxMonth').textContent = measureName() + ' (' + matrixUnit() + ') · ' + sliceText().replace(/ · [^·]+ a [^·]+$/, '')
-    + ' · sazonalidade: cada coluna é um ano · ignora o filtro de período';
-}
-// ---------- matriz: emissão por hectare queimado, bioma × mês do ano ----------
-function renderSeasonIntensity() {
-  const [m0, m1] = monthRange();
-  const uSel = S.uf === 'all' ? -1 : +S.uf, bSel = S.biome === 'all' ? -1 : +S.biome, g = S.gas;
-  const A = new Float64Array((NB + 1) * 12), E = new Float64Array((NB + 1) * 12);
-  for (let i = 0; i < N; i++) {
-    const m = F.m[i]; if (m < m0 || m > m1) continue;
-    if (uSel >= 0 && F.u[i] !== uSel) continue;
-    if (!coverPass(F.c[i])) continue;
-    const mo = +MONTHS[m].slice(5) - 1, b = F.b[i], e = g === 'total' ? F.co2[i] + F.ch4[i] + F.n2o[i] : F[g][i];
-    A[b * 12 + mo] += F.a[i]; E[b * 12 + mo] += e; A[NB * 12 + mo] += F.a[i]; E[NB * 12 + mo] += e;
-  }
-  const tbl = $('mxSeason'); tbl.textContent = '';
-  const hr = tbl.createTHead().insertRow();
-  ['Bioma', ...MON, 'Ano todo'].forEach(h => { const th = document.createElement('th'); th.scope = 'col'; th.textContent = h; hr.appendChild(th); });
-  const tb = tbl.createTBody(), stops = rampColors(), flip = +css('--ramp-ink-flip');
-  const rows = BIOMES.map((n, b) => [n, b]).filter(([, b]) => A.subarray(b * 12, b * 12 + 12).some(v => v > 0));
-  // sombreamento por linha: o mês mais alto de cada bioma fica mais escuro (sazonalidade do próprio bioma)
-  rows.concat([['Brasil', NB]]).forEach(([n, b]) => {
-    const tr = (b === NB ? tbl.createTFoot() : tb).insertRow(); if (b === bSel) tr.className = 'sel';
-    const th = document.createElement('th'); th.scope = 'row'; th.textContent = n; tr.appendChild(th);
-    const v = MON.map((_, k) => A[b * 12 + k] > 0 ? E[b * 12 + k] / A[b * 12 + k] : null);
-    const ok = v.filter(x => x !== null), lo = Math.min(...ok), hi = Math.max(...ok);
-    v.forEach((x, k) => {
-      const td = tr.insertCell(); td.textContent = x === null ? '-' : nf(1).format(x);
-      td.title = MON[k] + ': ' + fmtHa(A[b * 12 + k]).join(' ') + ' queimados';
-      if (x !== null && b !== NB && hi > lo) { const c = rampAt(stops, 0.08 + 0.8 * (x - lo) / (hi - lo)); td.style.background = c.color; td.className = 'v';
-        if (c.step >= flip) td.style.color = '#fbf8f2'; }
-    });
-    let sa = 0, se = 0; for (let k = 0; k < 12; k++) { sa += A[b * 12 + k]; se += E[b * 12 + k]; }
-    const td = tr.insertCell(); td.className = 'tot'; td.textContent = sa > 0 ? nf(1).format(se / sa) : '-';
-  });
-  $('sSeason').textContent = 'Σ emissão (' + GAS[g].unit + ') ÷ Σ área queimada (ha), por mês do ano, somando os anos do período'
-    + (uSel >= 0 ? ' · ' + DATA.ufs[uSel].sigla : '') + (coverLabel() ? ' · ' + coverLabel() : '')
-    + ' · sombreamento por linha: o mês mais escuro é o de maior emissão por hectare naquele bioma';
-}
-
 let cExt = null, extVar = 'AREA';
 function renderExternal(R) {
   const X = DATA.external; if (!X || !X.rows.length) return;
@@ -1902,35 +1877,178 @@ function renderExternal(R) {
   if (srcs.includes('SEEG 14') && extVar === 'CO2') notes.push('No CO₂ o SEEG usa outra conta (mortalidade tardia da floresta, sem CO₂ no campo); CH₄ e N₂O são a comparação mais direta.');
   $('extNote').textContent = notes.join(' · ');
 }
-function renderMatrices(M) {
-  M = M || aggregateYears();
-  const bSel = S.biome === 'all' ? -1 : +S.biome, uSel = S.uf === 'all' ? -1 : +S.uf;
-  const slice = (arr, i) => ({ A: arr.A.subarray(i * NY, (i + 1) * NY), E: arr.E.subarray(i * NY, (i + 1) * NY) });
-  const has = v => Array.from(v.A).some(x => x > 0);
-  const what = measureName() + ' (' + matrixUnit() + ')';
-  const shade = ' · sombreamento proporcional ao valor da célula';
-  const bName = bSel < 0 ? 'todos os biomas' : BIOMES[bSel];
-  const uName = uSel < 0 ? 'todas as UFs' : DATA.ufs[uSel].sigla;
-
-  const ufRows = DATA.ufs.map((u, i) => ({ label: u.sigla, title: u.nome, ...slice(M.uf, i),
-    T: territory(bSel, i), selected: i === uSel })).filter(has);
-  renderMatrix('mxUF', 'UF', ufRows, territory(bSel, -1));
-  $('tMxUF').textContent = 'UF × ano';
-  $('sMxUF').textContent = what + ' · ' + bName + shade;
-
-  const bRows = BIOMES.map((b, i) => ({ label: b, ...slice(M.biome, i), T: territory(i, uSel), selected: i === bSel })).filter(has);
-  renderMatrix('mxBiome', 'Bioma', bRows, territory(bSel, uSel));
-  $('sMxBiome').textContent = what + ' · ' + uName + shade;
-
-  const T = territory(bSel, uSel);
-  const cRows = COVER.map(([name], k) => ({ label: name, ...slice(M.cover, k), T })).filter(has);
-  renderMatrix('mxCover', 'Cobertura', cRows, T);
-  $('sMxCover').textContent = what + ' · ' + bName + ' · ' + uName + shade;
-  $('mxNote').textContent = (LAST_YEAR_PARTIAL ? '*' + LAST.slice(0, 4) + ' até ' + MON[+LAST.slice(5) - 1] + '. ' : '')
-    + (S.measure === 'dens' ? 'Por ha de território: Σ emissão (t) ÷ Σ área do território da linha (ha; cobertura: do recorte inteiro). ' : '')
-    + (S.measure === 'int' ? 'Por ha queimado: Σ emissão (t) ÷ Σ área queimada (ha) de cada célula. ' : '')
-    + 'As matrizes ignoram o filtro de período.';
+// ---------- matrizes configuráveis: linhas × colunas ----------
+const dimN = d => d === 'uf' ? NU : d === 'biome' ? NB : d === 'n0' ? 2 : d === 'year' ? NY : d === 'mon' ? 12 : NC;
+function dimKey(d, i, m) {
+  const c = F.c[i];
+  return d === 'uf' ? F.u[i] : d === 'biome' ? F.b[i] : d === 'n0' ? (IS_NAT[c] ? 0 : 1)
+    : d === 'year' ? YEAR_OF[m] : d === 'mon' ? +MONTHS[m].slice(5) - 1 : CLASS_COVER[c];
 }
+const MX = [{ id: 'mxA', r: 'uf', c: 'year', h: 'all' }, { id: 'mxB', r: 'biome', c: 'mon', h: 'row' }];
+const MX_NAMES = { n0: 'Nativa × agro', cover: 'Cobertura', biome: 'Bioma', uf: 'UF', year: 'Ano', mon: 'Mês' };
+function mxSeg(cfg, key, el, items) {
+  const box = $(el); box.textContent = '';
+  items.forEach(([v, t, title]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; if (title) b.title = title;
+    b.setAttribute('aria-pressed', String(cfg[key] === v));
+    b.addEventListener('click', () => { if (cfg[key] === v) return;
+      if (key !== 'h' && v === cfg[key === 'r' ? 'c' : 'r']) cfg[key === 'r' ? 'c' : 'r'] = cfg[key];  // não repete a dimensão: troca
+      cfg[key] = v; renderMx(cfg); }); box.appendChild(b); });
+}
+function mxData(cfg) {
+  const [m0, m1] = monthRange();
+  const bSel = S.biome === 'all' ? -1 : +S.biome, uSel = S.uf === 'all' ? -1 : +S.uf, g = S.gas;
+  const nr = dimN(cfg.r), nc = dimN(cfg.c), has = d => cfg.r === d || cfg.c === d;
+  const A = new Float64Array(nr * nc), E = new Float64Array(nr * nc);
+  for (let i = 0; i < N; i++) {
+    const m = F.m[i]; if (m < m0 || m > m1) continue;
+    if (!has('biome') && bSel >= 0 && F.b[i] !== bSel) continue;
+    if (!has('uf') && uSel >= 0 && F.u[i] !== uSel) continue;
+    if (!ufIn(F.u[i])) continue;
+    if (!coverPass(F.c[i])) continue;
+    const k = dimKey(cfg.r, i, m) * nc + dimKey(cfg.c, i, m);
+    A[k] += F.a[i]; E[k] += g === 'total' ? F.co2[i] + F.ch4[i] + F.n2o[i] : F[g][i];
+  }
+  return { A, E, nr, nc };
+}
+// território (ha) de uma célula: bioma e UF vêm da linha/coluna quando são essas dimensões, senão do filtro
+function mxT(cfg, kr, kc) {
+  const pick = d => cfg.r === d ? kr : cfg.c === d ? kc : -2;
+  let b = pick('biome'), u = pick('uf');
+  if (b === -2) b = S.biome === 'all' ? -1 : +S.biome;
+  if (u === -2) u = S.uf === 'all' ? -1 : +S.uf;
+  return territory(b, u);
+}
+function renderMx(cfg) {
+  const opts = Object.entries(MX_NAMES).map(([v, t]) => [v, t]);
+  mxSeg(cfg, 'r', cfg.id + 'R', opts); mxSeg(cfg, 'c', cfg.id + 'C', opts);
+  mxSeg(cfg, 'h', cfg.id + 'H', [['all', 'Tabela inteira', 'o maior valor da tabela é o mais escuro'], ['row', 'Por linha', 'o maior valor de cada linha é o mais escuro']]);
+  const X = mxData(cfg), DR = DIM_INFO[cfg.r], DC = DIM_INFO[cfg.c];
+  const rowsK = [...Array(X.nr).keys()].filter(r => { for (let c = 0; c < X.nc; c++) if (X.A[r * X.nc + c] > 0) return true; return false; });
+  const colsK = [...Array(X.nc).keys()].filter(c => rowsK.some(r => X.A[r * X.nc + c] > 0));
+  if (cfg.r === 'uf') rowsK.sort((a, b) => DATA.ufs[a].sigla.localeCompare(DATA.ufs[b].sigla));
+  const val = (r, c) => measureOf(X.A[r * X.nc + c], X.E[r * X.nc + c], mxT(cfg, r, c));
+  const sumR = r => colsK.reduce((s, c) => [s[0] + X.A[r * X.nc + c], s[1] + X.E[r * X.nc + c]], [0, 0]);
+  const sumC = c => rowsK.reduce((s, r) => [s[0] + X.A[r * X.nc + c], s[1] + X.E[r * X.nc + c]], [0, 0]);
+  // totais: território da linha (ou coluna) inteira; para cobertura/tipo/tempo, o do recorte
+  const totT = (d, k) => (d === 'biome' || d === 'uf') ? mxT({ r: d, c: '_' }, k, -1) : mxT({ r: '_', c: '_' }, -1, -1);
+  const grid = rowsK.map(r => colsK.map(c => val(r, c)));
+  const rowTot = rowsK.map(r => { const [a, e] = sumR(r); return measureOf(a, e, totT(cfg.r, r)); });
+  const colTot = colsK.map(c => { const [a, e] = sumC(c); return measureOf(a, e, totT(cfg.c, c)); });
+  let GA = 0, GE = 0; rowsK.forEach(r => { const [a, e] = sumR(r); GA += a; GE += e; });
+  const grand = measureOf(GA, GE, mxT({ r: '_', c: '_' }, -1, -1));
+  const lab = (D, k) => D.short(k);
+  const tbl = $(cfg.id); tbl.textContent = '';
+  const stops = rampColors(), flip = +css('--ramp-ink-flip');
+  const all = grid.flat().filter(v => v !== null && v > 0), gmax = Math.max(0, ...all), gmin = 0;
+  const hr = tbl.createTHead().insertRow();
+  [MX_NAMES[cfg.r] + ' \\ ' + MX_NAMES[cfg.c], ...colsK.map(c => lab(DC, c)), 'Total'].forEach(h => {
+    const th = document.createElement('th'); th.scope = 'col'; th.textContent = h; hr.appendChild(th); });
+  const tb = tbl.createTBody(), uSel = S.uf === 'all' ? -1 : +S.uf, bSel = S.biome === 'all' ? -1 : +S.biome;
+  rowsK.forEach((r, ri) => {
+    const tr = tb.insertRow();
+    if ((cfg.r === 'uf' && r === uSel) || (cfg.r === 'biome' && r === bSel)) tr.className = 'sel';
+    const th = document.createElement('th'); th.scope = 'row'; th.textContent = lab(DR, r); if (DR.full) th.title = DR.full(r); tr.appendChild(th);
+    const rv = grid[ri].filter(v => v !== null && v > 0), lo = cfg.h === 'row' ? Math.min(...rv) : gmin, hi = cfg.h === 'row' ? Math.max(...rv) : gmax;
+    grid[ri].forEach(v => {
+      const td = tr.insertCell(); td.textContent = cellText(v);
+      if (v > 0 && hi > lo) { const c = rampAt(stops, cfg.h === 'row' ? 0.08 + 0.8 * (v - lo) / (hi - lo) : v / hi);
+        td.style.background = c.color; td.className = 'v'; if (c.step >= flip) td.style.color = '#fbf8f2'; }
+    });
+    const td = tr.insertCell(); td.className = 'tot'; td.textContent = cellText(rowTot[ri]);
+  });
+  const tf = tbl.createTFoot().insertRow();
+  const fth = document.createElement('th'); fth.scope = 'row'; fth.textContent = 'Total'; tf.appendChild(fth);
+  colTot.forEach(v => { tf.insertCell().textContent = cellText(v); });
+  tf.insertCell().textContent = cellText(grand);
+  $(cfg.id + 'T').textContent = MX_NAMES[cfg.r] + ' × ' + MX_NAMES[cfg.c].toLowerCase();
+  $(cfg.id + 'S').textContent = measureName() + ' (' + matrixUnit() + ') · ' + sliceText();
+  const partial = (cfg.r === 'year' || cfg.c === 'year') && LAST_YEAR_PARTIAL ? '*' + LAST.slice(0, 4) + ' até ' + MON[+LAST.slice(5) - 1] + '. ' : '';
+  $(cfg.id + 'N').textContent = partial + (cfg.h === 'row' ? 'Sombreamento por linha: em cada linha, o mais escuro é o maior valor daquela linha. ' : '')
+    + (S.measure === 'dens' ? 'Por ha de território: território da célula (bioma e UF da linha/coluna, senão do recorte). ' : '')
+    + (S.measure === 'int' ? 'Por ha queimado: Σ emissão ÷ Σ área queimada de cada célula. ' : '');
+  // download do que está na tela, com valores completos
+  $(cfg.id + 'D').onclick = () => {
+    const esc = x => /[",\n;]/.test(x) ? '"' + String(x).replace(/"/g, '""') + '"' : String(x);
+    const unit = measureUnit(), raw = v => v === null ? '' : String(+v.toFixed(S.measure === 'dens' || S.measure === 'int' ? 5 : 1));
+    const lines = [[MX_NAMES[cfg.r] + ' \\ ' + MX_NAMES[cfg.c] + ' (' + unit + ')', ...colsK.map(c => DC.label(c)), 'Total'].map(esc).join(',')];
+    rowsK.forEach((r, ri) => lines.push([DR.label(r), ...grid[ri].map(raw), raw(rowTot[ri])].map(esc).join(',')));
+    lines.push(['Total', ...colTot.map(raw), raw(grand)].map(esc).join(','));
+    lines.push(''); lines.push(esc('# ' + measureName() + ' (' + unit + ') · ' + sliceText()));
+    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = ('matriz_' + MX_NAMES[cfg.r] + '_x_' + MX_NAMES[cfg.c] + '_' + measureName() + '_' + sliceText())
+      .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').replace(/_+/g, '_') + '.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+}
+
+// ---------- download de gráficos: CSV com os números e PNG com título, legenda e fonte ----------
+const DL_INFO = {
+  cMonthly: { x: () => SC_X(), chart: () => cMonthly, title: () => $('tMonthly').textContent, sub: () => $('sMonthly').textContent, total: true },
+  cRank: { x: () => DIM_INFO[S.rank].name, chart: () => cRank, title: () => $('tRank').textContent, sub: () => $('sRank').textContent, share: true },
+  cExt: { x: () => 'ano', chart: () => cExt, title: () => 'Comparação com outras bases', sub: () => $('sExt').textContent },
+};
+const SC_X = () => grainWord();
+const slug = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '').slice(0, 120);
+function saveBlob(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function chartCsv(key) {
+  const I = DL_INFO[key], ch = I.chart(); if (!ch) return;
+  const esc = x => /[",\n;]/.test(String(x)) ? '"' + String(x).replace(/"/g, '""') + '"' : String(x);
+  const ds = ch.data.datasets, num = v => v === null || v === undefined ? '' : String(+(+v).toFixed(6));
+  const head = [I.x ? I.x() : '', ...ds.map(d => d.label)];
+  if (I.total && ds.length > 1) head.push('Total');
+  if (I.share) head.push('% do total');
+  if (ds.some(d => d.err) || ch.$err) head.push('Incerteza 95% (mín.)', 'Incerteza 95% (máx.)');
+  const lines = [head.map(esc).join(',')];
+  ch.data.labels.forEach((lab, i) => {
+    const row = [lab, ...ds.map(d => num(d.data[i]))];
+    if (I.total && ds.length > 1) row.push(num(ds.reduce((s, d) => s + (d.data[i] || 0), 0)));
+    if (I.share) row.push(ds[0].share ? num(ds[0].share[i] * 100) : '');
+    const e = ch.$err ? ch.$err[i] : (ds.find(d => d.err) || {}).err ? ds.find(d => d.err).err[i] : undefined;
+    if (ds.some(d => d.err) || ch.$err) row.push(e ? num(e[0]) : '', e ? num(e[1]) : '');
+    lines.push(row.map(esc).join(','));
+  });
+  lines.push(''); lines.push(esc('# ' + I.title() + ' · ' + I.sub()));
+  lines.push(esc('# Monitor de emissões por fogo · MapBiomas Fogo / IPAM · gerado em ' + new Date().toLocaleDateString('pt-BR')));
+  saveBlob(new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }), slug(I.title() + '_' + sliceText()) + '.csv');
+}
+function chartPng(key) {
+  const I = DL_INFO[key], ch = I.chart(); if (!ch) return;
+  const src = ch.canvas, dpr = src.width / src.clientWidth || 1, W = src.width, pad = 20 * dpr;
+  const font = getComputedStyle(document.body).fontFamily;
+  const cv = document.createElement('canvas'), cx = cv.getContext('2d');
+  // quebra o subtítulo em linhas
+  cx.font = (12 * dpr) + 'px ' + font;
+  const words = I.sub().split(' '), lines = []; let ln = '';
+  words.forEach(w => { const t = ln ? ln + ' ' + w : w; if (cx.measureText(t).width > W - 2 * pad && ln) { lines.push(ln); ln = w; } else ln = t; });
+  if (ln) lines.push(ln);
+  const ds = ch.data.datasets.filter(d => !d.isLine && d.label);
+  const items = ds.length > 1 ? ds.map(d => [d.label, Array.isArray(d.backgroundColor) ? d.backgroundColor[0] : d.backgroundColor]) : [];
+  // legenda em linhas
+  cx.font = (11.5 * dpr) + 'px ' + font;
+  const legRows = []; let row = [], x = 0;
+  items.forEach(([l, c]) => { const w = 16 * dpr + cx.measureText(l).width + 14 * dpr;
+    if (x + w > W - 2 * pad && row.length) { legRows.push(row); row = []; x = 0; } row.push([l, c, w]); x += w; });
+  if (row.length) legRows.push(row);
+  const head = pad + 22 * dpr + lines.length * 16 * dpr + legRows.length * 18 * dpr + 10 * dpr, foot = 28 * dpr;
+  cv.width = W; cv.height = head + src.height + foot;
+  cx.fillStyle = css('--surface'); cx.fillRect(0, 0, cv.width, cv.height);
+  cx.fillStyle = css('--ink'); cx.textBaseline = 'top'; cx.font = '650 ' + (16 * dpr) + 'px ' + font; cx.fillText(I.title(), pad, pad);
+  cx.fillStyle = css('--ink-2'); cx.font = (12 * dpr) + 'px ' + font;
+  lines.forEach((l, i) => cx.fillText(l, pad, pad + 24 * dpr + i * 16 * dpr));
+  let y = pad + 24 * dpr + lines.length * 16 * dpr + 4 * dpr; cx.font = (11.5 * dpr) + 'px ' + font;
+  legRows.forEach(r => { let xx = pad; r.forEach(([l, c, w]) => { cx.fillStyle = c; cx.fillRect(xx, y + 2 * dpr, 10 * dpr, 10 * dpr);
+    cx.fillStyle = css('--ink-2'); cx.fillText(l, xx + 16 * dpr, y); xx += w; }); y += 18 * dpr; });
+  cx.drawImage(src, 0, head);
+  cx.fillStyle = css('--muted'); cx.font = (11 * dpr) + 'px ' + font;
+  cx.fillText('Monitor de emissões por fogo · MapBiomas Fogo / IPAM · ' + new Date().toLocaleDateString('pt-BR'), pad, head + src.height + 8 * dpr);
+  cv.toBlob(b => saveBlob(b, slug(I.title() + '_' + sliceText()) + '.png'), 'image/png');
+}
+document.querySelectorAll && document.querySelectorAll('[data-dl]').forEach(b => b.addEventListener('click', () =>
+  (b.dataset.dl === 'csv' ? chartCsv : chartPng)(b.dataset.chart)));
 
 // ---------- tabela ----------
 const HEAD = ['Mês', 'Área queimada (ha)', 'CO₂ (t)', 'CH₄ (t CO₂e)', 'N₂O (t CO₂e)', 'CO₂e total (t)', 'CO₂e por ha queimado (t/ha)', 'CO₂e por ha de território (t/ha)'];
@@ -1956,7 +2074,7 @@ $('dlSlice').addEventListener('click', () => {
     r.map((v, j) => j === 0 ? v : v === null ? '' : v.toFixed(j >= 6 ? 5 : 1)).join(',')));
   const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'monitor_emissoes_' + sliceText().normalize('NFD').replace(/[^\w]+/g, '_') + '.csv';
+  a.download = 'monitor_emissoes_' + sliceText().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_') + '.csv';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 });
 
@@ -2017,7 +2135,7 @@ function buildMethod() {
   });
   const anyB = Object.keys(MT.bioma)[0];
   tableFrom('mPools', ['Categoria', 'Compartimentos'], CATS.map(cat => [cat,
-    MT.antropic.includes(cat) ? 'estoque médio do bioma' : poolText(MT.bioma[anyB][cat].coef).replace(/^0,26×/, '26% da ')]));
+    MT.antropic.includes(cat) ? 'biomassa aérea (média do bioma)' : poolText(MT.bioma[anyB][cat].coef).replace(/^0,26×/, '26% da ')]));
   const stops = rampColors(), biomes = Object.keys(MT.bioma);
   const cfs = biomes.flatMap(b => CATS.map(c => MT.bioma[b][c].cf)), lo = Math.min(...cfs), hi = Math.max(...cfs);
   tableFrom('mCf', ['Categoria', ...biomes], CATS.map(cat => [cat, ...biomes.map(b => {
@@ -2048,7 +2166,7 @@ function buildCalc() {
   segC('cBioma', 'bioma', biomes); segC('cCat', 'cat', CATS);
   const f = MT.bioma[C.bioma][C.cat], antr = MT.antropic.includes(C.cat);
   const pools = $('cPools'); pools.textContent = '';
-  if (antr) pools.appendChild(el('p', 'note', 'Carbono médio de ' + C.cat.toLowerCase() + ' no ' + C.bioma + ': ' + fmtN(f.c_mean, 2) + ' t C/ha (usado como AGB).'));
+  if (antr) pools.appendChild(el('p', 'note', 'Biomassa aérea média de ' + C.cat.toLowerCase() + ' no ' + C.bioma + ': ' + fmtN(f.c_mean, 2) + ' t C/ha (valor único do bioma).'));
   else [['AGB', 'Biomassa aérea', 250], ['DW', 'Madeira morta', 40], ['LI', 'Serrapilheira', 20]].forEach(([k, n, max]) => {
     const used = f.coef[k] > 0;
     const lab = el('label', 'sl'); const nm = el('span', '', n + (used ? '' : ' (não usada)'));
@@ -2067,7 +2185,7 @@ function renderCalc() {
   const tot = gas.CO2 + gas.CH4 + gas.N2O;
   const ch = $('cChain'); ch.textContent = '';
   const term = (v, u, cls) => { const t = el('div', 'term' + (cls ? ' ' + cls : '')); t.append(el('div', 'v', v), el('div', 'u', u)); return t; };
-  ch.append(term(fmtN(stock, 1), antr ? 't C/ha (média do bioma)' : 't C/ha disponível'), el('div', 'op', '×'),
+  ch.append(term(fmtN(stock, 1), antr ? 't C/ha (biomassa aérea média)' : 't C/ha disponível'), el('div', 'op', '×'),
     term(fmtN(f.cf, 3), 'fator de combustão'), el('div', 'op', '='), term(fmtN(burned, 1), 't C/ha queimado'), el('div', 'op', '÷'),
     term('0,47', 'fração de C', 'hl'), el('div', 'op', '='), term(fmtN(dm, 1), 't MS/ha'), el('div', 'op', '→'),
     term(fmtN(tot, 1), 't CO₂e/ha', 'out'));
@@ -2094,9 +2212,8 @@ window.addEventListener('hashchange', route);
 function renderAll() {
   const R = aggregate();
   renderSlice();
-  const M = aggregateYears();
-  renderKPIs(R); renderMonthly(R); renderSide(R); renderAnnual(R); renderClass(R); renderUF(R);
-  renderSeasonIntensity(); renderExternal(R); renderMonthMatrix(R); renderMatrices(M); renderTable(R);
+  renderKPIs(R); renderMonthly(R); renderRank(R);
+  renderExternal(R); MX.forEach(renderMx); renderTable(R);
 }
 
 $('meta').textContent = 'Dados de ' + mLong(MONTHS[0]) + ' a ' + mLong(LAST) + ' · ' + NM + ' meses · '
