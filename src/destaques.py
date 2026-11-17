@@ -112,14 +112,17 @@ def geo_payload(geo_dir, biomes, ufs):
 
 
 def write(payload, geo_dir, out_path, build_date, dashboard_href="index.html"):
+    import i18n
     import site_header as sh
+    tr, manual = i18n.load()
     data = {k: payload[k] for k in ("months", "biomes", "ufs", "classes", "facts", "cover")}
     data["geo"] = geo_payload(geo_dir, payload["biomes"], payload["ufs"])
-    html = (TEMPLATE.replace("__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+    template, _ = i18n.wrap_scripts(TEMPLATE, i18n.auto_keys(tr, manual))
+    html = (template.replace("__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
             .replace("__BUILD_DATE__", build_date).replace("__DASH__", dashboard_href))
     pages = [(dashboard_href + "#painel", "Painel", "tabPainel"), (dashboard_href + "#metodo", "Método", "tabMetodo"),
              ("destaques.html", "Destaques do mês", "tabDestaques")]
-    html = (html.replace("__SITE_HEAD__", sh.JS_HEAD).replace("__SITE_CSS__", sh.CSS)
+    html = (html.replace("__SITE_HEAD__", i18n.runtime(tr) + sh.JS_HEAD).replace("__SITE_CSS__", sh.CSS)
             .replace("__SITE_HEADER__", sh.html(pages, "tabDestaques")).replace("__SITE_JS__", sh.JS_BODY)
             .replace("__LOGOS__", sh.logos_html().replace("'", "\'")))
     Path(out_path).write_text(html, encoding="utf-8")
@@ -297,12 +300,13 @@ __SITE_HEADER__
 </div>
 <main id="main"></main>
 <script>
-const DATA = __DATA__;
+const DATA = i18nDeep(__DATA__);
 const BUILD = '__BUILD_DATE__';
 const $ = id => document.getElementById(id);
 const F = DATA.facts, N = F.m.length, MONTHS = DATA.months, NM = MONTHS.length;
 const BIOMES = DATA.biomes, NB = BIOMES.length, UFS = DATA.ufs, NU = UFS.length, G = DATA.geo;
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+if (LANG !== 'pt') MES.splice(0, 12, ...I18N_MES);
 const MES3 = MES.map(m => m.slice(0, 3));
 const UF_NAME = UFS.map(u => u.nome);
 
@@ -513,7 +517,7 @@ function foot(ctx, n, extra) {
 }
 const cap = s => s[0].toUpperCase() + s.slice(1);
 const MASC = new Set(['Cerrado', 'Pantanal', 'Pampa']);
-const artB = n => MASC.has(n) ? 'O ' : 'A ', emB = n => MASC.has(n) ? 'no ' : 'na ';
+const artB = n => LANG !== 'pt' ? '' : MASC.has(n) ? 'O ' : 'A ', emB = n => MASC.has(n) ? 'no ' : 'na ';
 
 function page1(ctx) {
   const { y, mo } = ctx, r = sum(months(y, mo, false));
@@ -538,16 +542,16 @@ function mapPage(ctx, kind) {
   if (isB) {
     const ints = [...names.keys()].filter(k => A[k] > 500).sort((a, b) => E[b] / A[b] - E[a] / A[a]);
     lead = cap(art.trim().toLowerCase() + ' ' + BIOMES[topE]).trim() + ' respondeu por ' + pctTxt(pct(E[topE], r.E)) + ' da emissão e ' + pctTxt(pct(A[topE], r.A)) + ' da área queimada no mês.'
-      + (topA !== topE ? ' Em área, quem mais queimou foi ' + artB(BIOMES[topA]).trim().toLowerCase() + ' ' + BIOMES[topA] + '.' : '')
-      + (ints.length ? ' Por hectare queimado, ' + artB(BIOMES[ints[0]]).trim().toLowerCase() + ' ' + BIOMES[ints[0]] + ' emitiu mais: ' + nf(1).format(E[ints[0]] / A[ints[0]]) + ' t CO₂e/ha, contra ' + nf(1).format(r.E / r.A) + ' na média do Brasil.' : '');
+      + (topA !== topE ? ' Em área, quem mais queimou foi ' + artB(BIOMES[topA]).toLowerCase() + BIOMES[topA] + '.' : '')
+      + (ints.length ? ' Por hectare queimado, ' + artB(BIOMES[ints[0]]).toLowerCase() + BIOMES[ints[0]] + ' emitiu mais: ' + nf(1).format(E[ints[0]] / A[ints[0]]) + ' t CO₂e/ha, contra ' + nf(1).format(r.E / r.A) + ' na média do Brasil.' : '');
   } else {
     const t3 = idx.slice(0, 3), s3 = t3.reduce((s, k) => s + E[k], 0), s10 = idx.reduce((s, k) => s + E[k], 0);
     const nm = t3.map(k => UFS[k].nome);
     callout = nm.slice(0, -1).join(', ') + ' e ' + nm[nm.length - 1];
     lead = nm.slice(0, -1).join(', ') + ' e ' + nm[nm.length - 1] + ' somam ' + pctTxt(pct(s3, r.E)) + ' da emissão do país. Os ' + idx.length + ' primeiros estados somam ' + pctTxt(pct(s10, r.E)) + '.';
   }
-  const [mE, lgE] = choropleth(kind, E, r.E, 'E', 'Emissão por ' + (isB ? 'bioma' : 'estado'));
-  const [mA, lgA] = choropleth(kind, A, r.A, 'A', 'Área queimada por ' + (isB ? 'bioma' : 'estado'));
+  const [mE, lgE] = choropleth(kind, E, r.E, 'E', 'Emissão por ' + (isB ? TR('bioma') : TR('estado')));
+  const [mA, lgA] = choropleth(kind, A, r.A, 'A', 'Área queimada por ' + (isB ? TR('bioma') : TR('estado')));
   return '<section class="pg" id="' + id + '">' + pageHead(ctx) + '<div class="mapgrid"><div class="mapwrap">'
     + '<h2 style="text-align:center">' + cap(tag) + ' que mais emitiram em ' + MES[mo - 1] + '</h2>'
     + '<div class="tog" role="group" aria-label="Colorir o mapa por"><button type="button" aria-pressed="true" data-k="E">Emissão</button><button type="button" aria-pressed="false" data-k="A">Área queimada</button></div>'
@@ -565,14 +569,14 @@ function detailPage(ctx, kind) {
   const { y, mo } = ctx, r = sum(months(y, mo, false)), isB = kind === 'b';
   const E = isB ? r.bE : r.uE, k = [...E.keys()].sort((a, b) => E[b] - E[a])[0];
   const b = isB ? k : -1, u = isB ? -1 : k;
-  const name = isB ? BIOMES[k] : UFS[k].nome, art = isB ? artB(name) : (['PA', 'AM', 'MA', 'MT', 'AC', 'AP', 'TO', 'PI', 'CE', 'RN', 'PR', 'RS', 'ES', 'RJ', 'DF'].includes(UFS[k].sigla) ? 'O ' : '');
+  const name = isB ? BIOMES[k] : UFS[k].nome, art = isB ? artB(name) : LANG !== 'pt' ? '' : (['PA', 'AM', 'MA', 'MT', 'AC', 'AP', 'TO', 'PI', 'CE', 'RN', 'PR', 'RS', 'ES', 'RJ', 'DF'].includes(UFS[k].sigla) ? 'O ' : '');
   const ry = sum(months(y, mo, true)), sc = sum(months(y, mo, true), b, u);
   const sub = pctTxt(pct(E[k], r.E)) + ' da emissão do Brasil no mês e ' + pctTxt(pct(sc.E, ry.E)) + ' no ano.';
   const rm = sum(months(y, mo, false), b, u);
   const inner = isB ? oneRank(UFS.map(x => x.sigla), rm.uE, rm.E, 6, 'var(--emis)', 't CO₂e')
     : oneRank(BIOMES, rm.bE, rm.E, 6, 'var(--emis)', 't CO₂e');
   return '<section class="pg" id="' + (isB ? 'p3' : 'p5') + '">' + pageHead(ctx) + '<div class="dtop"><div class="sidehead"><div class="callout sm">' + esc(isB ? name : UFS[k].sigla) + '</div><div><div class="kick">' + (isB ? 'Bioma' : 'Estado') + ' que mais emitiu</div>'
-    + '<h2>' + esc(art + name) + ' foi o ' + (isB ? 'bioma' : 'estado') + ' que mais emitiu em ' + MES[mo - 1] + '</h2><div class="note">' + sub + '</div></div></div>'
+    + '<h2>' + esc(art + name) + ' foi o ' + (isB ? TR('bioma') : TR('estado')) + ' que mais emitiu em ' + MES[mo - 1] + '</h2><div class="note">' + sub + '</div></div></div>'
     + '<div class="loc">' + locator(kind, k) + '</div>'
     + '<div><h3 style="margin-top:0">Emissão por ' + (isB ? 'estado no bioma' : 'bioma no estado') + '</h3><p class="sub">' + cap(MES[mo - 1]) + ' de ' + y + ' · participação no total ' + (isB ? 'do bioma' : 'do estado') + '</p>' + inner + '</div></div>'
     + '<div class="cols">' + periodCol(ctx, false, b, u, name) + periodCol(ctx, true, b, u, name) + '</div>'
@@ -590,7 +594,7 @@ function page6(ctx) {
   let int1 = '<div class="rk" style="grid-template-columns:minmax(96px,auto) 1fr auto">';
   rowsI.forEach(b => { const v = r.bE[b] / r.bA[b], m = pA[b] > 0 ? pE[b] / pA[b] : null;
     int1 += '<span class="nm">' + esc(BIOMES[b]) + '</span><span class="track"><i style="width:' + (v / maxI * 100) + '%"></i>'
-      + (m ? '<b style="left:calc(' + (m / maxI * 100) + '% - 1px)" title="média do mesmo mês ' + years[0] + '–' + (y - 1) + '"></b>' : '') + '</span>'
+      + (m ? '<b style="left:calc(' + (m / maxI * 100) + '% - 1px)" title="' + TR('média do mesmo mês') + ' ' + years[0] + '–' + (y - 1) + '"></b>' : '') + '</span>'
       + '<span class="r"><b>' + nf(1).format(v) + '</b>' + (m ? ' <small class="note">média ' + nf(1).format(m) + '</small>' : '') + '</span>'; });
   int1 += '</div>';
   // cobertura: parte da área × parte da emissão (acumulado)

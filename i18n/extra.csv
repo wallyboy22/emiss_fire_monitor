@@ -1,0 +1,27 @@
+﻿pt,en,es,fr,ind,zh,auto
+ano,year,año,année,tahun,年份,nao
+Ano,Year,Año,Année,Tahun,年份,sim
+bioma,biome,bioma,biome,bioma,生物群系,nao
+estado,state,estado,État,negara bagian,州,nao
+cobertura,land cover,cobertura,couverture,tutupan lahan,土地覆盖,nao
+classe,class,clase,classe,kelas,类别,nao
+tipo,type,tipo,type,jenis,类型,nao
+ e , and , y , et , dan ,和,sim
+. A vegetação nativa foi ,. Native vegetation accounted for ,. La vegetación nativa representó el ,. La végétation native a représenté ,. Vegetasi alami mencakup ,。原生植被占 ,sim
+Colorir o mapa por,Color the map by,Colorear el mapa por,Colorer la carte par,Warnai peta menurut,地图着色依据,sim
+Localização,Location,Ubicación,Localisation,Lokasi,位置,sim
+Formação Herbácea Arbustiva,Herbaceous and Shrubby Vegetation,Formación Herbáceo-Arbustiva,Formation herbacée et arbustive,Vegetasi Herba dan Semak,草本和灌木混合植被,sim
+Restinga Herbácea,Herbaceous Sandbank Vegetation,Vegetación herbácea de restinga,Végétation herbacée de restinga,Vegetasi pesisir herba,草本沙洲植被,sim
+"GFED5.1: área queimada MODIS com pequenos fogos, todos os fogos de paisagem (inclui desmatamento e turfa), 0,25°","GFED5.1: MODIS burned area including small fires, all landscape fires (including deforestation and peat), 0.25°","GFED5.1: área quemada MODIS con fuegos pequeños, todos los fuegos de paisaje (incluye deforestación y turba), 0,25°","GFED5.1 : surface brûlée MODIS avec petits feux, tous les feux de paysage (y compris déforestation et tourbe), 0,25°","GFED5.1: area terbakar MODIS termasuk kebakaran kecil, semua kebakaran lanskap (termasuk deforestasi dan gambut), 0,25°",GFED5.1：包含小型火灾的 MODIS 烧毁面积，涵盖所有景观火灾（包括毁林和泥炭火灾），0.25°,sim
+"SEEG 14: queimadas não associadas ao desmatamento, só vegetação nativa (floresta, savana, campo); CH₄ e N₂O da combustão imediata; CO₂ = balanço da mortalidade tardia na floresta + savana (campo sem CO₂)","SEEG 14: fires not associated with deforestation, native vegetation only (forest, savanna, grassland); CH₄ and N₂O from immediate combustion; CO₂ = balance of delayed mortality in forest + savanna (no CO₂ in grassland)","SEEG 14: quemas no asociadas a la deforestación, solo vegetación nativa (bosque, sabana, campo); CH₄ y N₂O de la combustión inmediata; CO₂ = balance de la mortalidad tardía en bosque + sabana (campo sin CO₂)","SEEG 14 : feux non associés à la déforestation, végétation native uniquement (forêt, savane, prairie) ; CH₄ et N₂O de la combustion immédiate ; CO₂ = bilan de la mortalité tardive en forêt + savane (prairie sans CO₂)","SEEG 14: kebakaran yang tidak terkait deforestasi, hanya vegetasi alami (hutan, sabana, padang rumput); CH₄ dan N₂O dari pembakaran langsung; CO₂ = neraca kematian tertunda di hutan + sabana (padang rumput tanpa CO₂)",SEEG 14：与毁林无关的火灾，仅限原生植被（森林、稀树草原、草地）；CH₄ 和 N₂O 来自即时燃烧；CO₂ = 森林和稀树草原滞后死亡的平衡（草地不计 CO₂）,sim
+média do mesmo mês,average for the same month,promedio del mismo mes,moyenne du même mois,rata-rata bulan yang sama,同月平均值,nao
+ a , to , a , à , hingga , 至 ,sim
+Sul,South,Sur,Sud,Selatan,南部,sim
+Mosaico,Mosaic,Mosaico,Mosaïque,Mosaik,马赛克,sim
+Outras,Other,Otras,Autres,Lainnya,其他,sim
+biomas,biomes,biomas,biomes,bioma,生物群系,sim
+estados,states,estados,États,negara bagian,州,sim
+Coberturas: MapBiomas.,Land cover: MapBiomas.,Coberturas: MapBiomas.,Couverture : MapBiomas.,Tutupan lahan: MapBiomas.,土地覆盖：MapBiomas。,sim
+Contornos: IBGE.,Boundaries: IBGE.,Límites: IBGE.,Limites : IBGE.,Batas: IBGE.,边界：IBGE。,sim
+Coberturas: MapBiomas. Contornos: IBGE.,Land cover: MapBiomas. Boundaries: IBGE.,Coberturas: MapBiomas. Límites: IBGE.,Couverture : MapBiomas. Limites : IBGE.,Tutupan lahan: MapBiomas. Batas: IBGE.,土地覆盖：MapBiomas。边界：IBGE。,sim
+Plataforma: plataforma.monitorfogo.mapbiomas.org.,Platform: plataforma.monitorfogo.mapbiomas.org.,Plataforma: plataforma.monitorfogo.mapbiomas.org.,Plateforme : plataforma.monitorfogo.mapbiomas.org.,Platform: plataforma.monitorfogo.mapbiomas.org.,平台：plataforma.monitorfogo.mapbiomas.org。,sim

@@ -5,6 +5,8 @@ As páginas definem os tokens de cor (--page, --surface, --ink, --ink-2, --muted
 O tema escolhido fica em localStorage ('emf-theme') e vale para as duas páginas.
 """
 import base64
+
+import i18n
 from pathlib import Path
 
 LOGO_DIR = Path(__file__).resolve().parent.parent / "assets" / "logos"
@@ -14,10 +16,10 @@ NOTICE = ('Página <strong>não oficial e exploratória</strong>. Todo o conteú
           'Site oficial: <a href="https://ipam.org.br" target="_blank" rel="noopener">ipam.org.br</a>')
 
 CSS = """
-.site-notice { background: var(--surface); border-bottom: 1px solid var(--grid); color: var(--ink-2); font-size: 12.5px;
+.site-notice { background: color-mix(in srgb, var(--accent) 16%, var(--page)); border-bottom: 1px solid var(--grid); color: var(--ink-2); font-size: 12.5px;
   text-align: center; padding: 6px 16px; line-height: 1.4; }
 .site-notice a { color: var(--accent); font-weight: 700; }
-.site-top { border-bottom: 1px solid var(--grid); background: var(--page); }
+.site-top { border-bottom: 1px solid var(--grid); background: color-mix(in srgb, var(--accent) 9%, var(--page)); }
 .site-top .in { max-width: 1500px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .site-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); white-space: nowrap; }
 .site-logos { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 10px; padding: 4px 10px; border: 1px solid var(--grid); }
@@ -32,6 +34,7 @@ CSS = """
 .site-nav a:hover { background: var(--accent-weak); }
 .site-nav a[aria-current="page"] { background: var(--accent); color: var(--on-accent); }
 .site-nav a:focus-visible, .site-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.site-lang { padding-right: 8px; }
 .site-btn { border: 1px solid var(--axis); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 13px;
   font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 @media (max-width: 720px) { .site-name { display: none; } .site-nav { order: 3; flex-basis: 100%; } .site-btn { margin-left: auto; } }
@@ -57,7 +60,7 @@ def html(pages, active):
             '<div class="site-top" role="banner"><div class="in"><a class="site-brand" href="index.html#painel">' + logos_html()
             + '<span class="site-name">Monitor de emissões por fogo<small>exploratório</small></span></a>'
             f'<nav class="site-nav" aria-label="Páginas">{nav}</nav>'
-            '<button type="button" class="site-btn" id="btnTheme"></button></div></div>')
+            + i18n.select_html() + '<button type="button" class="site-btn" id="btnTheme"></button></div></div>')
 
 
 # tema: lê a escolha salva antes de desenhar; o botão alterna e avisa a página pelo evento 'emf-theme'
@@ -65,8 +68,8 @@ JS_HEAD = ("<script>(function(){var t='light';try{t=localStorage.getItem('" + TH
            "document.documentElement.setAttribute('data-theme',t)})();</script>")
 JS_BODY = """<script>(function () {
   var b = document.getElementById('btnTheme'), r = document.documentElement;
-  function label() { b.textContent = r.getAttribute('data-theme') === 'dark' ? '☀ Claro' : '☾ Escuro';
-    b.setAttribute('aria-label', r.getAttribute('data-theme') === 'dark' ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'); }
+  function label() { b.textContent = TR(r.getAttribute('data-theme') === 'dark' ? '☀ Claro' : '☾ Escuro');
+    b.setAttribute('aria-label', TR(r.getAttribute('data-theme') === 'dark' ? 'Mudar para o tema claro' : 'Mudar para o tema escuro')); }
   label();
   b.addEventListener('click', function () {
     var t = r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';

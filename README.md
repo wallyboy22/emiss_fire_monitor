@@ -19,6 +19,10 @@ O consolidado contém 32.768 linhas, 94 meses (2019-01 a 2026-10) e 27 UFs. No t
 - [`src/destaques.py`](src/destaques.py): gera a página, chamado pelo `build_dashboard.py`.
 - [`src/geometrias.py`](src/geometrias.py): baixa e simplifica os contornos de biomas (IBGE, via GEE) e UFs (malha do IBGE) para `data/geo/`; rode uma vez.
 
+## Idiomas
+
+As duas páginas têm um seletor de idioma ao lado do botão de tema: português, inglês, espanhol, francês, indonésio e mandarim (o idioma também pode vir em `?lang=en`). As traduções estão em [`i18n/`](i18n/) e entram no build por [`src/i18n.py`](src/i18n.py); o passo a passo para traduzir textos novos está em [`i18n/INSTRUCOES_TRADUCAO.md`](i18n/INSTRUCOES_TRADUCAO.md).
+
 ## Comparação externa
 
 - [`src/comparacao_externa.py`](src/comparacao_externa.py): soma o GFED5.1 (Zenodo), o SEEG 14 (fogo em vegetação nativa, CSVs do Drive) e o CAMS GFAS (API do ADS, requer chave) no Brasil, com máscara dos limites do IBGE, e grava [`data/externo/comparacao_anual.csv`](data/externo/comparacao_anual.csv) (área queimada em ha; CO₂, CH₄, N₂O e matéria seca em t). O dashboard mostra a comparação quando esse arquivo existe.

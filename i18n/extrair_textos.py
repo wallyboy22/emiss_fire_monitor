@@ -1,8 +1,8 @@
 """Extrai os textos visíveis (pt-BR) do painel e dos destaques para a tabela de tradução.
 
 Uso: python i18n/extrair_textos.py   (na raiz do repositório, depois do build)
-Saída: i18n/traducoes_pt_en.csv com as colunas id, pagina, tipo, contexto, pt, en.
-Se o CSV já existir, as traduções preenchidas (coluna en) são mantidas para os mesmos textos.
+Saída: i18n/textos_novos.csv, só com os textos que ainda não estão em i18n/traducoes.csv nem em
+i18n/extra.csv. Traduza as colunas de idioma (en, es, fr, ind, zh) e junte as linhas ao traducoes.csv.
 """
 import csv
 import html as H
@@ -13,7 +13,9 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "i18n" / "traducoes_pt_en.csv"
+OUT = ROOT / "i18n" / "textos_novos.csv"
+KNOWN = [ROOT / "i18n" / "traducoes.csv", ROOT / "i18n" / "extra.csv"]
+LANG_COLS = ["en", "es", "fr", "ind", "zh"]
 BIOMES_EN = {"Amazônia": "Amazon", "Cerrado": "Cerrado", "Caatinga": "Caatinga", "Mata Atlântica": "Atlantic Forest",
              "Pampa": "Pampa", "Pantanal": "Pantanal", "Natural": "Natural", "Antrópico": "Anthropic"}
 WORD = re.compile(r"[A-Za-zÀ-ÿ]{2,}")
@@ -139,9 +141,9 @@ def main():
         src = (ROOT / fn).read_text(encoding="utf-8")
         Page(page, col).feed(src)
         for sc in re.findall(r"<script>([\s\S]*?)</script>", src):
-            if "Chart.js v" in sc[:4000]:
+            if "Chart.js v" in sc[:4000] or "var I18N =" in sc:
                 continue
-            sc = re.sub(r"const DATA = \{[\s\S]*?\};\n", "const DATA = {};\n", sc, count=1)
+            sc = re.sub(r"const DATA = (i18nDeep\()?\{[\s\S]*?\}\)?;\n", "const DATA = {};\n", sc, count=1)
             for pos, t in js_strings(sc):
                 t = H.unescape(t)
                 if NOT_TEXT.match(t) or CODEY.search(t):
@@ -159,7 +161,8 @@ def main():
                     continue
                 if WORD.search(t) and not re.match(r'^\s*[".]|.*="', t):
                     col.add(page, "js", line, t)
-    data = json.loads(re.search(r"const DATA = (\{[\s\S]*?\});\n", (ROOT / "index.html").read_text(encoding="utf-8")).group(1))
+    src = (ROOT / "index.html").read_text(encoding="utf-8")
+    data, _ = json.JSONDecoder().raw_decode(src[src.index("{", src.index("const DATA = ")):])
     for b in data["biomes"]:
         col.add("dados", "dado", "bioma", b)
     for name, _ in data["cover"]:
@@ -178,8 +181,13 @@ def main():
         if not r["en"] and r["pt"] in official:
             r["en"] = official[r["pt"]]
             r["contexto"] = (r["contexto"] + " · nome oficial MapBiomas, manter").strip(" ·")
+    known = set()
+    for k in KNOWN:
+        if k.exists():
+            known |= {r["pt"] for r in csv.DictReader(k.open(encoding="utf-8-sig"))}
+    col.rows = [dict(r, **{c: "" for c in LANG_COLS[1:]}) for r in col.rows if r["pt"] not in known]
     with OUT.open("w", encoding="utf-8-sig", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["id", "pagina", "tipo", "contexto", "pt", "en"])
+        w = csv.DictWriter(f, fieldnames=["id", "pagina", "tipo", "contexto", "pt", *LANG_COLS])
         w.writeheader()
         w.writerows(col.rows)
     print(OUT, len(col.rows), dict(Counter(r["tipo"] for r in col.rows)))

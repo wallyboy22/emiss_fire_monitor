@@ -21,6 +21,7 @@ _sys.path.insert(0, str(Path(__file__).resolve().parent))
 import primeiro_ensaio as _pe  # noqa: E402  (fatores usados nas imagens; fonte única para a página de método)
 import destaques as _dq  # noqa: E402  (página "Destaques do mês")
 import site_header as _sh  # noqa: E402  (cabeçalho comum)
+import i18n as _i18n  # noqa: E402  (idiomas)
 
 HERE = Path(__file__).resolve().parent
 if HERE.name == "src":  # repositório público
@@ -1142,10 +1143,11 @@ __SITE_HEADER__
 </div>
 
 <script>
-const DATA = __DATA__;
+const DATA = i18nDeep(__DATA__);
 const F = DATA.facts, N = F.m.length;
 const MONTHS = DATA.months, BIOMES = DATA.biomes, NB = BIOMES.length, NM = MONTHS.length;
 const MON = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+if (LANG !== 'pt') MON.splice(0, 12, ...I18N_MON);
 const mLabel = ym => MON[+ym.slice(5) - 1] + '/' + ym.slice(2, 4);
 const mLong = ym => MON[+ym.slice(5) - 1] + ' de ' + ym.slice(0, 4);
 const YEARS = [...new Set(MONTHS.map(m => m.slice(0, 4)))];
@@ -1573,7 +1575,7 @@ function timeBuckets(R) {
   } else for (let m = R.m0; m <= R.m1; m++) out.push({ lab: mLabel(MONTHS[m]), long: mLong(MONTHS[m]), ms: [m] });
   return out;
 }
-const grainWord = () => ({ y: 'ano', m: 'mês', moy: 'mês do ano' })[effGrain()];
+const grainWord = () => ({ y: TR('ano'), m: 'mês', moy: 'mês do ano' })[effGrain()];
 function renderMonthly(R) {
   const ms = S.measure, D = DETAIL[S.group], nD = R.nD, TB = timeBuckets(R);
   const fixedAxis = S.group === 'year' || S.group === 'mon';  // o eixo já é definido pelo detalhamento
@@ -1605,7 +1607,7 @@ function renderMonthly(R) {
   cMonthly.options.scales.y.suggestedMax = undefined;
   legend($('lgMonthly'), series.map(sr => [sr.label, sr.color]));
   const how = { cover: 'cobertura do solo (cores MapBiomas)', n0: 'vegetação nativa × agropecuária',
-    n4: 'classe detalhada (cores MapBiomas)', biome: 'bioma', year: 'ano (do mais claro, 2019, ao mais escuro)',
+    n4: 'classe detalhada (cores MapBiomas)', biome: TR('bioma'), year: 'ano (do mais claro, 2019, ao mais escuro)',
     mon: 'mês do ano',
     uf: 'UF (tons por região: Norte verde, Nordeste laranja, Centro-Oeste rosa, Sudeste azul, Sul roxo)' }[S.group];
   $('sMonthly').textContent = measureName() + ' (' + measureUnit() + '), empilhado por ' + how
@@ -1662,12 +1664,12 @@ function sumBy(dim) {
   return { A, E, n };
 }
 const DIM_INFO = {
-  cover: { name: 'cobertura', label: k => COVER[k][0], short: k => DATA.cover_short[COVER[k][0]] || COVER[k][0], color: k => coverColor(k) },
-  n4: { name: 'classe', label: k => N4[k], short: k => N4[k], color: k => N4_COLOR[k] },
-  biome: { name: 'bioma', label: k => BIOMES[k], short: k => BIOMES[k], color: k => biomeColor(k) },
+  cover: { name: TR('cobertura'), label: k => COVER[k][0], short: k => DATA.cover_short[COVER[k][0]] || COVER[k][0], color: k => coverColor(k) },
+  n4: { name: TR('classe'), label: k => N4[k], short: k => N4[k], color: k => N4_COLOR[k] },
+  biome: { name: TR('bioma'), label: k => BIOMES[k], short: k => BIOMES[k], color: k => biomeColor(k) },
   uf: { name: 'UF', label: k => DATA.ufs[k].sigla, short: k => DATA.ufs[k].sigla, full: k => DATA.ufs[k].nome, color: k => UF_COLOR[k] },
-  n0: { name: 'tipo', label: k => ['Vegetação nativa', 'Agropecuária'][k], short: k => ['Nativa', 'Agropecuária'][k], color: k => css(k === 0 ? '--nat' : '--ant') },
-  year: { name: 'ano', time: true, label: k => YEARS[k], short: k => YEARS[k] + (YEARS[k] === LAST.slice(0, 4) && LAST_YEAR_PARTIAL ? '*' : ''), color: k => rampAt(rampColors(), 0.18 + 0.82 * k / Math.max(1, NY - 1)).color },
+  n0: { name: TR('tipo'), label: k => ['Vegetação nativa', 'Agropecuária'][k], short: k => ['Nativa', 'Agropecuária'][k], color: k => css(k === 0 ? '--nat' : '--ant') },
+  year: { name: TR('ano'), time: true, label: k => YEARS[k], short: k => YEARS[k] + (YEARS[k] === LAST.slice(0, 4) && LAST_YEAR_PARTIAL ? '*' : ''), color: k => rampAt(rampColors(), 0.18 + 0.82 * k / Math.max(1, NY - 1)).color },
   mon: { name: 'mês do ano', time: true, label: k => MON[k], short: k => MON[k], color: k => 'hsl(' + ((k * 30 + 200) % 360) + ' 55% 45%)' },
 };
 function renderRank(R) {
@@ -1925,7 +1927,7 @@ function renderMx(cfg) {
 const DL_INFO = {
   cMonthly: { x: () => SC_X(), chart: () => cMonthly, title: () => $('tMonthly').textContent, sub: () => $('sMonthly').textContent, total: true },
   cRank: { x: () => DIM_INFO[S.rank].name, chart: () => cRank, title: () => $('tRank').textContent, sub: () => $('sRank').textContent, share: true },
-  cExt: { x: () => 'ano', chart: () => cExt, title: () => 'Comparação com outras bases', sub: () => $('sExt').textContent },
+  cExt: { x: () => TR('ano'), chart: () => cExt, title: () => 'Comparação com outras bases', sub: () => $('sExt').textContent },
 };
 const SC_X = () => grainWord();
 const slug = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '').slice(0, 120);
@@ -2182,7 +2184,9 @@ def main():
         df.drop(columns=["ym"]).to_csv(args.csv, index=False, encoding="utf-8")
     payload = build_payload(df, pd.read_csv(args.territory))
     payload["external"] = external_payload(args.external)
-    html = (HTML_TEMPLATE
+    tr, manual = _i18n.load()
+    template, n_wrapped = _i18n.wrap_scripts(HTML_TEMPLATE, _i18n.auto_keys(tr, manual))
+    html = (template
             .replace("__CHART_JS__", args.chart_js.read_text(encoding="utf-8"))
             .replace("__CSV_HREF__", args.csv_href)
             .replace("__CSV_NAME__", Path(args.csv_href).name)
@@ -2190,7 +2194,7 @@ def main():
             .replace("__DATA__", json.dumps(payload, ensure_ascii=False, separators=(",", ":"))))
     pages = [("index.html#painel", "Painel", "tabPainel"), ("index.html#metodo", "Método", "tabMetodo"),
              ("destaques.html", "Destaques do mês", "tabDestaques")]
-    html = (html.replace("__SITE_HEAD__", _sh.JS_HEAD).replace("__SITE_CSS__", _sh.CSS)
+    html = (html.replace("__SITE_HEAD__", _i18n.runtime(tr) + _sh.JS_HEAD).replace("__SITE_CSS__", _sh.CSS)
             .replace("__SITE_HEADER__", _sh.html(pages, "tabPainel")).replace("__SITE_JS__", _sh.JS_BODY))
     for key, svg in method_svgs().items():
         html = html.replace(key, svg)
