@@ -107,7 +107,7 @@ def select_html():
             "<script>(function () { var s = document.getElementById('selLang'); s.value = LANG;"
             + "var N = " + json.dumps(NAMES, ensure_ascii=False) + "; for (var i = 0; i < s.options.length; i++) s.options[i].title = N[s.options[i].value];"
             + "s.addEventListener('change', function () { try { localStorage.setItem('emf-lang', s.value); } catch (e) {}"
-            + " var u = new URL(location.href); u.searchParams.delete('lang'); location.href = u.toString(); }); })();</script>")
+            + " var u = new URL(location.href); u.searchParams.delete('lang'); history.replaceState(null, '', u.toString()); location.reload(); }); })();</script>")
 
 
 # ---------------------------------------------------------------- embrulho dos literais do JS
